@@ -1,6 +1,4 @@
 import type {
-  Account,
-  AccountType,
   ColumnMapping,
   CsvUpload,
   CsvUploadDetails,
@@ -10,11 +8,6 @@ import type {
 } from './domain-model'
 
 export type CsvImportApiPort = {
-  listAccounts: () => Promise<Account[]>
-  createAccount: (input: {
-    name: string
-    type: AccountType
-  }) => Promise<Account>
   uploadCsv: (input: {
     accountId: string
     file: File

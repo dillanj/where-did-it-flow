@@ -1,82 +1,86 @@
-import { useMemo, useState } from 'react'
-import { accountTypes, type ColumnMapping } from '../../domain/domain-model'
-import type { CsvImportViewModel } from '../../presenter/csv-import-presenter'
+import { useMemo, useState } from "react";
+import { useSignalValue } from "@tcn/state";
+import { accountTypes } from "../../../accounts/domain/domain-model";
+import type { ColumnMapping } from "../../domain/domain-model";
+import type { CsvImportPresenter } from "../../presenter/csv-import-presenter";
 
 export type CsvImportScreenProps = {
-  viewModel: CsvImportViewModel
-  onCreateAccount: (input: {
-    name: string
-    type: (typeof accountTypes)[number]
-  }) => Promise<void>
-  onSelectAccount: (accountId: string) => Promise<void>
-  onUploadCsv: (file: File) => Promise<void>
-  onSelectUpload: (uploadId: string) => Promise<void>
-  onUpdateMapping: (field: keyof ColumnMapping, value: string) => void
-  onPreviewUpload: () => Promise<void>
-  onImportUpload: () => Promise<void>
-}
+  presenter: CsvImportPresenter;
+};
 
 const formatCurrency = (amountCents: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(amountCents / 100)
-}
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amountCents / 100);
+};
 
-export const CsvImportScreen = ({
-  viewModel,
-  onCreateAccount,
-  onSelectAccount,
-  onUploadCsv,
-  onSelectUpload,
-  onUpdateMapping,
-  onPreviewUpload,
-  onImportUpload
-}: CsvImportScreenProps) => {
-  const [accountName, setAccountName] = useState('')
-  const [accountType, setAccountType] = useState<(typeof accountTypes)[number]>('checking')
+export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
+  const broadcasts = presenter.broadcasts;
+
+  const accounts = useSignalValue(presenter.accountsPresenter.accountsBroadcast);
+  const selectedAccountId = useSignalValue(broadcasts.selectedAccountId);
+  const uploads = useSignalValue(broadcasts.uploads);
+  const selectedUploadId = useSignalValue(broadcasts.selectedUploadId);
+  const headers = useSignalValue(broadcasts.headers);
+  const mapping = useSignalValue(broadcasts.mapping);
+  const preview = useSignalValue(broadcasts.preview);
+  const importResult = useSignalValue(broadcasts.importResult);
+  const message = useSignalValue(broadcasts.message);
+  const errorMessage = useSignalValue(broadcasts.errorMessage);
+  const isManagingAccount = useSignalValue(broadcasts.isManagingAccount);
+  const isUploading = useSignalValue(broadcasts.isUploading);
+  const isPreviewing = useSignalValue(broadcasts.isPreviewing);
+  const isImporting = useSignalValue(broadcasts.isImporting);
+
+  const [accountName, setAccountName] = useState("");
+  const [accountType, setAccountType] = useState<(typeof accountTypes)[number]>("checking");
 
   const previewRows = useMemo(() => {
-    return viewModel.preview?.rows.slice(0, 12) ?? []
-  }, [viewModel.preview])
+    return preview?.rows.slice(0, 12) ?? [];
+  }, [preview]);
 
   const handleCreateAccount = async () => {
     if (!accountName.trim()) {
-      return
+      return;
     }
 
-    await onCreateAccount({
-      name: accountName,
-      type: accountType
-    })
+    try {
+      await presenter.createAccount({
+        name: accountName,
+        type: accountType,
+      });
 
-    setAccountName('')
-  }
+      setAccountName("");
+    } catch {
+      return;
+    }
+  };
 
   return (
-    <main className='import-page'>
-      <section className='import-hero'>
+    <main className="import-page">
+      <section className="import-hero">
         <div>
-          <p className='eyebrow'>Phase 3 · CSV Import</p>
+          <p className="eyebrow">Phase 3 · CSV Import</p>
           <h1>Import Bank CSVs Without Leaking Logic Into React</h1>
           <p>
-            Upload statements, map columns, preview parsed transactions, and confirm imports with
-            clean domain boundaries.
+            Upload statements, map columns, preview parsed transactions, and confirm imports with clean domain
+            boundaries.
           </p>
         </div>
       </section>
 
-      <section className='import-grid'>
-        <article className='panel'>
-          <header className='panel-header'>
+      <section className="import-grid">
+        <article className="panel">
+          <header className="panel-header">
             <h2>Accounts</h2>
-            <span>{viewModel.accounts.length} total</span>
+            <span>{accounts.length} total</span>
           </header>
 
-          <div className='account-create'>
+          <div className="account-create">
             <input
               value={accountName}
-              placeholder='Create account name'
+              placeholder="Create account name"
               onChange={(event) => setAccountName(event.target.value)}
             />
             <select
@@ -88,167 +92,171 @@ export const CsvImportScreen = ({
                   <option key={type} value={type}>
                     {type}
                   </option>
-                )
+                );
               })}
             </select>
-            <button onClick={handleCreateAccount} disabled={viewModel.isManagingAccount}>
-              {viewModel.isManagingAccount ? 'Creating…' : 'Create'}
+            <button onClick={handleCreateAccount} disabled={isManagingAccount}>
+              {isManagingAccount ? "Creating…" : "Create"}
             </button>
           </div>
 
-          <div className='chip-list'>
-            {viewModel.accounts.map((account) => {
-              const selected = account.id === viewModel.selectedAccountId
+          <div className="chip-list">
+            {accounts.map((account) => {
+              const selected = account.id === selectedAccountId;
 
               return (
                 <button
                   key={account.id}
-                  className={selected ? 'chip selected' : 'chip'}
+                  className={selected ? "chip selected" : "chip"}
                   onClick={() => {
-                    void onSelectAccount(account.id)
+                    void presenter.selectAccount(account.id);
                   }}
                 >
                   <span>{account.name}</span>
                   <small>{account.type}</small>
                 </button>
-              )
+              );
             })}
           </div>
+
+          {accounts.length === 0 ? (
+            <p className="empty-state">No accounts yet. Create one to start importing.</p>
+          ) : null}
+
+          {errorMessage ? <p className="status error">{errorMessage}</p> : null}
+          {message ? <p className="status">{message}</p> : null}
         </article>
 
-        <article className='panel'>
-          <header className='panel-header'>
+        <article className="panel">
+          <header className="panel-header">
             <h2>Upload</h2>
-            <span>{viewModel.selectedAccountId ? 'Account selected' : 'Choose account first'}</span>
+            <span>{selectedAccountId ? "Account selected" : "Choose account first"}</span>
           </header>
 
-          <label className='file-picker'>
+          <label className="file-picker">
             <input
-              type='file'
-              accept='.csv,text/csv'
-              disabled={!viewModel.selectedAccountId || viewModel.isUploading}
+              type="file"
+              accept=".csv,text/csv"
+              disabled={!selectedAccountId || isUploading}
               onChange={(event) => {
-                const file = event.target.files?.[0]
+                const file = event.target.files?.[0];
 
                 if (!file) {
-                  return
+                  return;
                 }
 
-                void onUploadCsv(file)
+                void presenter.uploadCsv(file);
               }}
             />
-            <span>{viewModel.isUploading ? 'Uploading…' : 'Choose CSV file'}</span>
+            <span>{isUploading ? "Uploading…" : "Choose CSV file"}</span>
           </label>
 
-          <div className='upload-list'>
-            {viewModel.uploads.map((upload) => {
-              const selected = upload.id === viewModel.selectedUploadId
+          <div className="upload-list">
+            {uploads.map((upload) => {
+              const selected = upload.id === selectedUploadId;
 
               return (
                 <button
                   key={upload.id}
-                  className={selected ? 'upload-row selected' : 'upload-row'}
+                  className={selected ? "upload-row selected" : "upload-row"}
                   onClick={() => {
-                    void onSelectUpload(upload.id)
+                    void presenter.selectUpload(upload.id);
                   }}
                 >
                   <strong>{upload.fileName}</strong>
                   <span>{upload.status}</span>
                 </button>
-              )
+              );
             })}
           </div>
         </article>
 
-        <article className='panel wide'>
-          <header className='panel-header'>
+        <article className="panel wide">
+          <header className="panel-header">
             <h2>Mapping</h2>
-            <span>{viewModel.headers.length} headers detected</span>
+            <span>{headers.length} headers detected</span>
           </header>
 
-          <div className='mapping-grid'>
+          <div className="mapping-grid">
             {[
-              ['dateColumn', 'Date column'],
-              ['descriptionColumn', 'Description column'],
-              ['amountColumn', 'Amount column'],
-              ['debitColumn', 'Debit column'],
-              ['creditColumn', 'Credit column']
+              ["dateColumn", "Date column"],
+              ["descriptionColumn", "Description column"],
+              ["amountColumn", "Amount column"],
+              ["debitColumn", "Debit column"],
+              ["creditColumn", "Credit column"],
             ].map(([field, label]) => {
-              const key = field as keyof ColumnMapping
+              const key = field as keyof ColumnMapping;
 
               return (
                 <label key={field}>
                   <span>{label}</span>
                   <select
-                    value={viewModel.mapping[key] ?? ''}
-                    onChange={(event) => onUpdateMapping(key, event.target.value)}
+                    value={mapping[key] ?? ""}
+                    onChange={(event) => presenter.updateMapping(key, event.target.value)}
                   >
-                    <option value=''>Not mapped</option>
-                    {viewModel.headers.map((header) => {
+                    <option value="">Not mapped</option>
+                    {headers.map((header) => {
                       return (
                         <option key={header} value={header}>
                           {header}
                         </option>
-                      )
+                      );
                     })}
                   </select>
                 </label>
-              )
+              );
             })}
           </div>
 
-          <div className='actions'>
+          <div className="actions">
             <button
               onClick={() => {
-                void onPreviewUpload()
+                void presenter.previewSelectedUpload();
               }}
-              disabled={!viewModel.selectedUploadId || viewModel.isPreviewing}
+              disabled={!selectedUploadId || isPreviewing}
             >
-              {viewModel.isPreviewing ? 'Previewing…' : 'Run Preview'}
+              {isPreviewing ? "Previewing…" : "Run Preview"}
             </button>
             <button
-              className='accent'
+              className="accent"
               onClick={() => {
-                void onImportUpload()
+                void presenter.importSelectedUpload();
               }}
-              disabled={!viewModel.preview || viewModel.isImporting}
+              disabled={!preview || isImporting}
             >
-              {viewModel.isImporting ? 'Importing…' : 'Confirm Import'}
+              {isImporting ? "Importing…" : "Confirm Import"}
             </button>
           </div>
-
-          {viewModel.errorMessage ? <p className='status error'>{viewModel.errorMessage}</p> : null}
-          {viewModel.message ? <p className='status'>{viewModel.message}</p> : null}
         </article>
 
-        <article className='panel wide'>
-          <header className='panel-header'>
+        <article className="panel wide">
+          <header className="panel-header">
             <h2>Preview</h2>
-            <span>{viewModel.preview ? `${viewModel.preview.parsedRowCount} parsed rows` : 'No preview yet'}</span>
+            <span>{preview ? `${preview.parsedRowCount} parsed rows` : "No preview yet"}</span>
           </header>
 
-          {viewModel.preview ? (
+          {preview ? (
             <>
-              <div className='stat-grid'>
+              <div className="stat-grid">
                 <div>
                   <p>Inflow</p>
-                  <strong>{formatCurrency(viewModel.preview.inflowTotalCents)}</strong>
+                  <strong>{formatCurrency(preview.inflowTotalCents)}</strong>
                 </div>
                 <div>
                   <p>Outflow</p>
-                  <strong>{formatCurrency(viewModel.preview.outflowTotalCents)}</strong>
+                  <strong>{formatCurrency(preview.outflowTotalCents)}</strong>
                 </div>
                 <div>
                   <p>Duplicates</p>
-                  <strong>{viewModel.preview.duplicateRowCount}</strong>
+                  <strong>{preview.duplicateRowCount}</strong>
                 </div>
                 <div>
                   <p>Invalid</p>
-                  <strong>{viewModel.preview.invalidRowCount}</strong>
+                  <strong>{preview.invalidRowCount}</strong>
                 </div>
               </div>
 
-              <div className='preview-table'>
+              <div className="preview-table">
                 <table>
                   <thead>
                     <tr>
@@ -262,36 +270,36 @@ export const CsvImportScreen = ({
                   <tbody>
                     {previewRows.map((row) => {
                       return (
-                        <tr key={`${row.rowIndex}-${row.description}`}> 
+                        <tr key={`${row.rowIndex}-${row.description}`}>
                           <td>{row.rowIndex + 1}</td>
-                          <td>{row.transactionDate ?? '—'}</td>
-                          <td>{row.description ?? '—'}</td>
-                          <td>{row.amountCents !== null ? formatCurrency(row.amountCents) : '—'}</td>
+                          <td>{row.transactionDate ?? "—"}</td>
+                          <td>{row.description ?? "—"}</td>
+                          <td>{row.amountCents !== null ? formatCurrency(row.amountCents) : "—"}</td>
                           <td>
-                            {row.isDuplicate ? 'duplicate' : ''}
-                            {row.isValid ? '' : ' invalid'}
+                            {row.isDuplicate ? "duplicate" : ""}
+                            {row.isValid ? "" : " invalid"}
                           </td>
                         </tr>
-                      )
+                      );
                     })}
                   </tbody>
                 </table>
               </div>
             </>
           ) : (
-            <p className='empty-state'>Upload a CSV and run preview to inspect parsed rows.</p>
+            <p className="empty-state">Upload a CSV and run preview to inspect parsed rows.</p>
           )}
 
-          {viewModel.importResult ? (
-            <div className='import-result'>
+          {importResult ? (
+            <div className="import-result">
               <h3>Import Result</h3>
-              <p>Inserted: {viewModel.importResult.insertedCount}</p>
-              <p>Skipped duplicates: {viewModel.importResult.skippedDuplicateCount}</p>
-              <p>Invalid rows: {viewModel.importResult.invalidRowCount}</p>
+              <p>Inserted: {importResult.insertedCount}</p>
+              <p>Skipped duplicates: {importResult.skippedDuplicateCount}</p>
+              <p>Invalid rows: {importResult.invalidRowCount}</p>
             </div>
           ) : null}
         </article>
       </section>
     </main>
-  )
-}
+  );
+};

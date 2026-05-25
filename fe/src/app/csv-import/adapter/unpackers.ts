@@ -1,23 +1,10 @@
 import type {
-  Account,
   CsvUpload,
   CsvUploadDetails,
   CsvUploadResult,
   UploadImportResult,
   UploadPreview
 } from '../domain/domain-model'
-
-export const unpackAccount = (value: unknown): Account => {
-  const payload = value as Account
-
-  return {
-    id: payload.id,
-    name: payload.name,
-    type: payload.type,
-    createdAt: payload.createdAt,
-    updatedAt: payload.updatedAt
-  }
-}
 
 export const unpackUpload = (value: unknown): CsvUpload => {
   const payload = value as CsvUpload

@@ -1,204 +1,148 @@
-import { Signal } from '@tcn/state'
-import type { CsvImportDomain } from '../domain/csv-import-domain'
-import type {
-  Account,
-  AccountType,
-  ColumnMapping,
-  CsvUpload,
-  CsvUploadDetails,
-  UploadImportResult,
-  UploadPreview
-} from '../domain/domain-model'
-
-export type CsvImportViewModel = {
-  accounts: Account[]
-  selectedAccountId: string | null
-  uploads: CsvUpload[]
-  selectedUploadId: string | null
-  selectedUploadDetails: CsvUploadDetails | null
-  headers: string[]
-  sampleRows: Record<string, string>[]
-  mapping: ColumnMapping
-  preview: UploadPreview | null
-  importResult: UploadImportResult | null
-  message: string | null
-  errorMessage: string | null
-  isInitializing: boolean
-  isManagingAccount: boolean
-  isUploading: boolean
-  isPreviewing: boolean
-  isImporting: boolean
-}
-
-const isPending = (status: string) => {
-  return status === 'PENDING'
-}
+import { derive, type DerivedSignal } from "@tcn/state";
+import { AccountsPresenter } from "../../accounts/presenter/accounts-presenter";
+import type { AccountType } from "../../accounts/domain/domain-model";
+import type { ColumnMapping } from "../domain/domain-model";
+import type { CsvImportDomain } from "../domain/csv-import-domain";
+import { CsvImportMappingPreviewPresenter } from "./csv-import-mapping-preview-presenter";
+import { CsvImportUploadsPresenter } from "./csv-import-uploads-presenter";
 
 export class CsvImportPresenter {
-  private readonly _domain: CsvImportDomain
+  private readonly _domain: CsvImportDomain;
 
-  readonly viewModel = new Signal<CsvImportViewModel>({
-    accounts: [],
-    selectedAccountId: null,
-    uploads: [],
-    selectedUploadId: null,
-    selectedUploadDetails: null,
-    headers: [],
-    sampleRows: [],
-    mapping: {
-      dateColumn: '',
-      descriptionColumn: '',
-      amountColumn: '',
-      debitColumn: '',
-      creditColumn: '',
-      categoryColumn: '',
-      notesColumn: '',
-      dateFormat: ''
-    },
-    preview: null,
-    importResult: null,
-    message: null,
-    errorMessage: null,
-    isInitializing: false,
-    isManagingAccount: false,
-    isUploading: false,
-    isPreviewing: false,
-    isImporting: false
-  })
+  readonly accountsPresenter: AccountsPresenter;
+  readonly uploadsPresenter: CsvImportUploadsPresenter;
+  readonly mappingPreviewPresenter: CsvImportMappingPreviewPresenter;
 
-  private readonly _subscriptions: Array<{ unsubscribe: () => void }> = []
+  private readonly _message: DerivedSignal<string | null>;
+  private readonly _errorMessage: DerivedSignal<string | null>;
+  private readonly _isInitializing: DerivedSignal<boolean>;
 
-  constructor(input: { domain: CsvImportDomain }) {
-    this._domain = input.domain
+  constructor(domain: CsvImportDomain) {
+    this._domain = domain;
 
-    this._subscriptions.push(
-      this._domain.state.subscribe(() => {
-        this._syncViewModel()
-      })
-    )
+    this.accountsPresenter = new AccountsPresenter({
+      domain: this._domain.accountsDomain,
+    });
 
-    this._subscriptions.push(
-      this._domain.initializeRunner.stateBroadcast.subscribe(() => {
-        this._syncViewModel()
-      })
-    )
+    this.uploadsPresenter = new CsvImportUploadsPresenter({
+      domain: this._domain.uploadsDomain,
+    });
 
-    this._subscriptions.push(
-      this._domain.accountRunner.stateBroadcast.subscribe(() => {
-        this._syncViewModel()
-      })
-    )
+    this.mappingPreviewPresenter = new CsvImportMappingPreviewPresenter({
+      domain: this._domain.mappingPreviewDomain,
+    });
 
-    this._subscriptions.push(
-      this._domain.uploadRunner.stateBroadcast.subscribe(() => {
-        this._syncViewModel()
-      })
-    )
+    this._message = derive(
+      this.accountsPresenter.broadcasts.message,
+      this.uploadsPresenter.broadcasts.message,
+      this.mappingPreviewPresenter.broadcasts.message,
+      (accountsMessage, uploadsMessage, mappingPreviewMessage) => {
+        return mappingPreviewMessage ?? uploadsMessage ?? accountsMessage ?? null;
+      },
+    );
 
-    this._subscriptions.push(
-      this._domain.previewRunner.stateBroadcast.subscribe(() => {
-        this._syncViewModel()
-      })
-    )
+    this._errorMessage = derive(
+      this.accountsPresenter.broadcasts.errorMessage,
+      this.uploadsPresenter.broadcasts.errorMessage,
+      this.mappingPreviewPresenter.broadcasts.errorMessage,
+      (accountsErrorMessage, uploadsErrorMessage, mappingPreviewErrorMessage) => {
+        return mappingPreviewErrorMessage ?? uploadsErrorMessage ?? accountsErrorMessage ?? null;
+      },
+    );
 
-    this._subscriptions.push(
-      this._domain.importRunner.stateBroadcast.subscribe(() => {
-        this._syncViewModel()
-      })
-    )
+    this._isInitializing = derive(
+      this.accountsPresenter.broadcasts.isInitializing,
+      this.uploadsPresenter.broadcasts.isLoadingUploads,
+      (isAccountsInitializing, isUploadsInitializing) => {
+        return isAccountsInitializing || isUploadsInitializing;
+      },
+    );
+  }
 
-    this._syncViewModel()
+  get broadcasts() {
+    return {
+      accounts: this.accountsPresenter.broadcasts.accounts,
+      selectedAccountId: this.accountsPresenter.broadcasts.selectedAccountId,
+      uploads: this.uploadsPresenter.broadcasts.uploads,
+      selectedUploadId: this.uploadsPresenter.broadcasts.selectedUploadId,
+      selectedUploadDetails: this.uploadsPresenter.broadcasts.selectedUploadDetails,
+      headers: this.mappingPreviewPresenter.broadcasts.headers,
+      sampleRows: this.mappingPreviewPresenter.broadcasts.sampleRows,
+      mapping: this.mappingPreviewPresenter.broadcasts.mapping,
+      preview: this.mappingPreviewPresenter.broadcasts.preview,
+      importResult: this.mappingPreviewPresenter.broadcasts.importResult,
+      message: this._message.broadcast,
+      errorMessage: this._errorMessage.broadcast,
+      isInitializing: this._isInitializing.broadcast,
+      isManagingAccount: this.accountsPresenter.broadcasts.isManagingAccount,
+      isUploading: this.uploadsPresenter.broadcasts.isUploading,
+      isPreviewing: this.mappingPreviewPresenter.broadcasts.isPreviewing,
+      isImporting: this.mappingPreviewPresenter.broadcasts.isImporting,
+    };
   }
 
   initialize = async () => {
     try {
-      await this._domain.initialize()
+      await this._domain.initialize();
     } catch {
-      return
+      return;
     }
-  }
+  };
 
-  createAccount = async (input: {
-    name: string
-    type: AccountType
-  }) => {
-    try {
-      await this._domain.createAccount(input)
-    } catch {
-      return
-    }
-  }
+  createAccount = async (input: { name: string; type: AccountType }) => {
+    await this._domain.createAccount(input);
+  };
 
   selectAccount = async (accountId: string) => {
     try {
-      await this._domain.selectAccount(accountId)
+      await this._domain.selectAccount(accountId);
     } catch {
-      return
+      return;
     }
-  }
+  };
 
   selectUpload = async (uploadId: string) => {
     try {
-      await this._domain.selectUpload(uploadId)
+      await this._domain.selectUpload(uploadId);
     } catch {
-      return
+      return;
     }
-  }
+  };
 
   uploadCsv = async (file: File) => {
     try {
-      await this._domain.uploadCsv(file)
+      await this._domain.uploadCsv(file);
     } catch {
-      return
+      return;
     }
-  }
+  };
 
   updateMapping = (field: keyof ColumnMapping, value: string) => {
-    this._domain.updateMapping(field, value)
-  }
+    this._domain.updateMapping(field, value);
+  };
 
   previewSelectedUpload = async () => {
     try {
-      await this._domain.previewSelectedUpload()
+      await this._domain.previewSelectedUpload();
     } catch {
-      return
+      return;
     }
-  }
+  };
 
   importSelectedUpload = async () => {
     try {
-      await this._domain.importSelectedUpload()
+      await this._domain.importSelectedUpload();
     } catch {
-      return
+      return;
     }
-  }
-
-  private _syncViewModel = () => {
-    const state = this._domain.state.get()
-    const errorMessage =
-      this._domain.initializeRunner.error?.message ??
-      this._domain.accountRunner.error?.message ??
-      this._domain.uploadRunner.error?.message ??
-      this._domain.previewRunner.error?.message ??
-      this._domain.importRunner.error?.message ??
-      null
-
-    this.viewModel.set({
-      ...state,
-      errorMessage,
-      isInitializing: isPending(this._domain.initializeRunner.status),
-      isManagingAccount: isPending(this._domain.accountRunner.status),
-      isUploading: isPending(this._domain.uploadRunner.status),
-      isPreviewing: isPending(this._domain.previewRunner.status),
-      isImporting: isPending(this._domain.importRunner.status)
-    })
-  }
+  };
 
   dispose = () => {
-    this._subscriptions.forEach((subscription) => {
-      subscription.unsubscribe()
-    })
-
-    this.viewModel.dispose()
-  }
+    this._message.dispose();
+    this._errorMessage.dispose();
+    this._isInitializing.dispose();
+    this.mappingPreviewPresenter.dispose();
+    this.uploadsPresenter.dispose();
+    this.accountsPresenter.dispose();
+  };
 }

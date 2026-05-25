@@ -1,9 +1,8 @@
 # csv-import
 
-Feature scaffold only. Business logic should be implemented later using:
+CSV import feature boundaries:
 
-- domain/
-- adapter/
-- presenter/
-- view/
-- utils/
+- `domain/`: upload, mapping, preview, and import orchestration
+- `adapter/`: CSV import API adapter
+- `presenter/`: focused presenters with broadcast seams
+- `view/`: React UI wired to presenter broadcasts

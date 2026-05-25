@@ -1,9 +1,7 @@
 # accounts
 
-Feature scaffold only. Business logic should be implemented later using:
+Account feature boundaries:
 
-- domain/
-- adapter/
-- presenter/
-- view/
-- utils/
+- `domain/`: account business state and commands
+- `adapter/`: account API adapter
+- `presenter/`: account broadcasts and UI-facing transforms

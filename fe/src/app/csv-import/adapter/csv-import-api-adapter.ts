@@ -1,7 +1,6 @@
 import { AppError } from '../../shared/errors/app-error'
 import { packColumnMapping } from './packers'
 import {
-  unpackAccount,
   unpackUpload,
   unpackUploadDetails,
   unpackUploadImportResult,
@@ -9,8 +8,6 @@ import {
   unpackUploadResult
 } from './unpackers'
 import type {
-  Account,
-  AccountType,
   ColumnMapping,
   CsvUpload,
   CsvUploadDetails,
@@ -47,33 +44,6 @@ const expectOk = async (response: Response) => {
 export const createCsvImportApiAdapter = (
   input: CreateCsvImportApiAdapterInput
 ): CsvImportApiPort => {
-  const listAccounts = async (): Promise<Account[]> => {
-    const response = await fetch(`${input.apiBaseUrl}/api/accounts`)
-
-    await expectOk(response)
-
-    const payload = (await response.json()) as unknown[]
-
-    return payload.map(unpackAccount)
-  }
-
-  const createAccount = async (payload: {
-    name: string
-    type: AccountType
-  }): Promise<Account> => {
-    const response = await fetch(`${input.apiBaseUrl}/api/accounts`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    })
-
-    await expectOk(response)
-
-    return unpackAccount(await response.json())
-  }
-
   const uploadCsv = async (payload: {
     accountId: string
     file: File
@@ -160,8 +130,6 @@ export const createCsvImportApiAdapter = (
   }
 
   return {
-    listAccounts,
-    createAccount,
     uploadCsv,
     listUploadsByAccountId,
     getUploadById,

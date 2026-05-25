@@ -1,27 +1,47 @@
 import { describe, expect, it } from 'vitest'
+import type { AccountsApiPort } from '../../../accounts/domain/domain-ports'
+import type { Account } from '../../../accounts/domain/domain-model'
 import { CsvImportDomain } from '../csv-import-domain'
 import type { CsvImportApiPort } from '../domain-ports'
 
-const createApi = (): CsvImportApiPort => {
-  return {
-    listAccounts: async () => [
-      {
-        id: 'acct-1',
-        name: 'Main',
-        type: 'checking',
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z'
-      }
-    ],
+const createApis = (): {
+  accountsApi: AccountsApiPort
+  csvImportApi: CsvImportApiPort
+  getListAccountsCallCount: () => number
+} => {
+  const accounts: Account[] = [
+    {
+      id: 'acct-1',
+      name: 'Main',
+      type: 'checking',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z'
+    }
+  ]
+
+  let listAccountsCallCount = 0
+
+  const accountsApi: AccountsApiPort = {
+    listAccounts: async () => {
+      listAccountsCallCount += 1
+      return [...accounts]
+    },
     createAccount: async ({ name, type }) => {
-      return {
-        id: 'acct-2',
+      const nextAccount: Account = {
+        id: `acct-${accounts.length + 1}`,
         name,
         type,
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z'
+        createdAt: `2026-01-${String(accounts.length + 1).padStart(2, '0')}T00:00:00.000Z`,
+        updatedAt: `2026-01-${String(accounts.length + 1).padStart(2, '0')}T00:00:00.000Z`
       }
-    },
+
+      accounts.push(nextAccount)
+
+      return nextAccount
+    }
+  }
+
+  const csvImportApi: CsvImportApiPort = {
     uploadCsv: async () => {
       return {
         id: 'upload-1',
@@ -67,27 +87,58 @@ const createApi = (): CsvImportApiPort => {
       }
     }
   }
+
+  return {
+    accountsApi,
+    csvImportApi,
+    getListAccountsCallCount: () => listAccountsCallCount
+  }
 }
 
 describe('CsvImportDomain', () => {
   it('loads accounts and selects first account on initialize', async () => {
+    const apiHarness = createApis()
     const domain = new CsvImportDomain({
-      api: createApi()
+      accountsApi: apiHarness.accountsApi,
+      csvImportApi: apiHarness.csvImportApi
     })
 
     await domain.initialize()
 
-    const state = domain.state.get()
+    expect(domain.accountsDomain.accounts.get()).toHaveLength(1)
+    expect(domain.accountsDomain.selectedAccountId.get()).toBe('acct-1')
 
-    expect(state.accounts).toHaveLength(1)
-    expect(state.selectedAccountId).toBe('acct-1')
+    domain.dispose()
+  })
+
+  it('reloads accounts and keeps newly created account selected', async () => {
+    const apiHarness = createApis()
+    const domain = new CsvImportDomain({
+      accountsApi: apiHarness.accountsApi,
+      csvImportApi: apiHarness.csvImportApi
+    })
+
+    await domain.initialize()
+    await domain.createAccount({
+      name: 'Travel Card',
+      type: 'credit_card'
+    })
+
+    const accounts = domain.accountsDomain.accounts.get()
+
+    expect(domain.accountsDomain.accounts.get()).toHaveLength(2)
+    expect(accounts.some((account) => account.name === 'Travel Card')).toBe(true)
+    expect(domain.accountsDomain.selectedAccountId.get()).toBe('acct-2')
+    expect(apiHarness.getListAccountsCallCount()).toBe(2)
 
     domain.dispose()
   })
 
   it('autofills mapping guesses from upload headers', async () => {
+    const apiHarness = createApis()
     const domain = new CsvImportDomain({
-      api: createApi()
+      accountsApi: apiHarness.accountsApi,
+      csvImportApi: apiHarness.csvImportApi
     })
 
     await domain.initialize()
@@ -98,11 +149,10 @@ describe('CsvImportDomain', () => {
 
     await domain.uploadCsv(file)
 
-    const state = domain.state.get()
-
-    expect(state.mapping.dateColumn).toBe('Date')
-    expect(state.mapping.descriptionColumn).toBe('Description')
-    expect(state.mapping.amountColumn).toBe('Amount')
+    expect(domain.mappingPreviewDomain.mapping.get().dateColumn).toBe('Date')
+    expect(domain.mappingPreviewDomain.mapping.get().descriptionColumn).toBe('Description')
+    expect(domain.mappingPreviewDomain.mapping.get().amountColumn).toBe('Amount')
+    expect(domain.mappingPreviewDomain.contextUploadId.get()).toBe('upload-1')
 
     domain.dispose()
   })

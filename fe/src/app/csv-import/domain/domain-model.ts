@@ -1,21 +1,3 @@
-export const accountTypes = [
-  'checking',
-  'savings',
-  'credit_card',
-  'cash',
-  'other'
-] as const
-
-export type AccountType = (typeof accountTypes)[number]
-
-export type Account = {
-  id: string
-  name: string
-  type: AccountType
-  createdAt: string
-  updatedAt: string
-}
-
 export type CsvUpload = {
   id: string
   accountId: string
@@ -84,20 +66,6 @@ export type CsvUploadResult = {
   createdAt: string
 }
 
-export type CsvImportDomainState = {
-  accounts: Account[]
-  selectedAccountId: string | null
-  uploads: CsvUpload[]
-  selectedUploadId: string | null
-  selectedUploadDetails: CsvUploadDetails | null
-  headers: string[]
-  sampleRows: Record<string, string>[]
-  mapping: ColumnMapping
-  preview: UploadPreview | null
-  importResult: UploadImportResult | null
-  message: string | null
-}
-
 export const createEmptyColumnMapping = (): ColumnMapping => {
   return {
     dateColumn: '',
@@ -108,21 +76,5 @@ export const createEmptyColumnMapping = (): ColumnMapping => {
     categoryColumn: '',
     notesColumn: '',
     dateFormat: ''
-  }
-}
-
-export const createInitialCsvImportState = (): CsvImportDomainState => {
-  return {
-    accounts: [],
-    selectedAccountId: null,
-    uploads: [],
-    selectedUploadId: null,
-    selectedUploadDetails: null,
-    headers: [],
-    sampleRows: [],
-    mapping: createEmptyColumnMapping(),
-    preview: null,
-    importResult: null,
-    message: null
   }
 }

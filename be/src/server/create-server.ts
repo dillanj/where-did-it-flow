@@ -15,6 +15,19 @@ export const createServer = async (
     logger: true
   })
 
+  app.addHook('onRequest', async (request, reply) => {
+    reply.header('Access-Control-Allow-Origin', '*')
+    reply.header(
+      'Access-Control-Allow-Methods',
+      'GET,POST,PATCH,DELETE,OPTIONS'
+    )
+    reply.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
+    if (request.method === 'OPTIONS') {
+      reply.status(204).send()
+    }
+  })
+
   await app.register(multipart, {
     limits: {
       fileSize: 20 * 1024 * 1024
