@@ -1,3 +1,4 @@
+import { Signal } from '@tcn/state'
 import type { AppShellDomain } from '../domain/app-shell-domain'
 
 export type AppShellViewModel = {
@@ -6,14 +7,15 @@ export type AppShellViewModel = {
 }
 
 export type AppShellPresenter = {
-  getViewModel: () => AppShellViewModel
+  viewModel: Signal<AppShellViewModel>['broadcast']
+  dispose: () => void
 }
 
 export const createAppShellPresenter = (
   domain: AppShellDomain
 ): AppShellPresenter => {
-  const getViewModel = () => {
-    const state = domain.getState()
+  const mapStateToViewModel = () => {
+    const state = domain.state.get()
 
     return {
       heading: state.title,
@@ -21,7 +23,17 @@ export const createAppShellPresenter = (
     }
   }
 
+  const viewModelSignal = new Signal<AppShellViewModel>(mapStateToViewModel())
+
+  const subscription = domain.state.subscribe(() => {
+    viewModelSignal.set(mapStateToViewModel())
+  })
+
   return {
-    getViewModel
+    viewModel: viewModelSignal.broadcast,
+    dispose: () => {
+      subscription.unsubscribe()
+      viewModelSignal.dispose()
+    }
   }
 }

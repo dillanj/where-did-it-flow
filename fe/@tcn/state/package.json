@@ -1,0 +1,68 @@
+{
+  "name": "@tcn/state",
+  "version": "1.3.4",
+  "type": "module",
+  "description": "State management for complex business logic.",
+  "author": "TCN",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "access": "public",
+  "files": [
+    "dist",
+    "src",
+    "types",
+    "README.md",
+    "AI_USAGE.md",
+    "ai-docs",
+    "!ai-docs/*.local.md",
+    "tsconfig.json"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "@bc-monorepo/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "@bc-monorepo/source": "./src/core.ts",
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "default": "./dist/core.js"
+    },
+    "./react": {
+      "@bc-monorepo/source": "./src/react.ts",
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js",
+      "default": "./dist/react.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "scripts": {
+    "build": "vite build",
+    "clean": "rm -rf dist storybook-static .holding",
+    "clean:all": "pnpm clean && rm -rf node_modules",
+    "start": "storybook dev",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "check:all": "concurrently 'pnpm check:types' 'pnpm run biome check .'",
+    "check:types": "tsc --project tsconfig.typecheck.json --noEmit",
+    "check:format": "pnpm run biome format .",
+    "check:lint": "pnpm run biome lint .",
+    "check:imports": "pnpm run biome check --formatter-enabled=false --linter-enabled=false --assist-enabled=true",
+    "fix:all": "pnpm run biome check --write",
+    "fix:format": "pnpm run biome format --write",
+    "fix:lint": "pnpm run biome lint --write",
+    "fix:imports": "pnpm run biome check --write --unsafe --formatter-enabled=false --linter-enabled=false --assist-enabled=true",
+    "publish:dry-run": "pnpm build && pnpm publish --dry-run --force --no-git-checks",
+    "biome": "pnpm exec biome"
+  }
+}
