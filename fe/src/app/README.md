@@ -1,5 +1,14 @@
 # Frontend Feature Structure
 
+Scaffolded feature folders:
+
+- `accounts`
+- `csv-import`
+- `category-rules`
+- `dashboard`
+- `theme`
+- `shared`
+
 Each feature should follow this shape:
 
 ```txt

@@ -1,12 +1,6 @@
-import Fastify from 'fastify'
-import { bootstrapRoutes } from './app-bootstrap/adapter/http/bootstrap-routes'
+import type { DatabaseClient } from '../db/connection'
+import { createServer } from '../server/create-server'
 
-export const createApp = () => {
-  const app = Fastify({
-    logger: true
-  })
-
-  app.register(bootstrapRoutes)
-
-  return app
+export const createApp = (databaseClient: DatabaseClient) => {
+  return createServer({ databaseClient })
 }

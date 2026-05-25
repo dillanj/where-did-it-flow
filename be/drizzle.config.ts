@@ -1,6 +1,6 @@
 import { defineConfig } from 'drizzle-kit'
 
-const databaseUrl = process.env.DATABASE_URL ?? './data/money-flow.db'
+const databaseUrl = process.env.DATABASE_URL ?? './data/money-flow.sqlite'
 
 export default defineConfig({
   out: './drizzle',

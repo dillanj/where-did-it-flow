@@ -1,4 +1,4 @@
-import type { DatabaseClient } from '../../../../db/sqlite'
+import type { DatabaseClient } from '../../../../db/connection'
 import { appMetadataTable } from './schema'
 
 export const createAppBootstrapRepository = (client: DatabaseClient) => {
@@ -8,13 +8,13 @@ export const createAppBootstrapRepository = (client: DatabaseClient) => {
       .values({
         key: 'bootstrap.last_started_at',
         value: timestampIso,
-        updatedAt: new Date()
+        updatedAt: new Date().toISOString()
       })
       .onConflictDoUpdate({
         target: appMetadataTable.key,
         set: {
           value: timestampIso,
-          updatedAt: new Date()
+          updatedAt: new Date().toISOString()
         }
       })
       .run()
