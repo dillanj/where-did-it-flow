@@ -1,4 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
+import { createAccountsRoutes } from './accounts/adapter/http/accounts-routes'
+import { createAccountsRepository } from './accounts/adapter/sqlite/accounts-repository'
+import { AccountsService } from './accounts/service/accounts-service'
 import { createCsvFileStorageAdapter } from './csv-import/adapter/files/csv-file-storage-adapter'
 import { createCsvImportRoutes } from './csv-import/adapter/http/csv-import-routes'
 import { createCsvParserAdapter } from './csv-import/adapter/parsing/csv-parser-adapter'
@@ -27,6 +30,16 @@ export const createRegisterAppRoutes = (
     await fastify.register(
       createBootstrapRoutes({
         service: bootstrapService
+      })
+    )
+
+    const accountsService = new AccountsService({
+      repository: createAccountsRepository(input.databaseClient)
+    })
+
+    await fastify.register(
+      createAccountsRoutes({
+        service: accountsService
       })
     )
 

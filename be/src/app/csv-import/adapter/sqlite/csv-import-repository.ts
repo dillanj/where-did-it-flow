@@ -1,8 +1,49 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import type { DatabaseClient } from '../../../../db/connection'
 import type { CsvUploadRepositoryPort } from '../../domain/domain-ports'
-import type { CsvUpload } from '../../domain/domain-model'
-import { accountsTable, csvUploadsTable, transactionsTable } from './schema'
+import type { CsvColumnMapping, CsvUpload } from '../../domain/domain-model'
+import {
+  accountsTable,
+  csvColumnMappingsTable,
+  csvUploadsTable,
+  transactionsTable
+} from './schema'
+
+const toCsvUpload = (
+  row: typeof csvUploadsTable.$inferSelect
+): CsvUpload => {
+  return {
+    id: row.id,
+    accountId: row.accountId,
+    fileName: row.fileName,
+    storedFilePath: row.storedFilePath,
+    originalFileHash: row.originalFileHash,
+    statementYear: row.statementYear,
+    statementMonth: row.statementMonth,
+    status: row.status,
+    createdAt: row.createdAt
+  }
+}
+
+const toCsvColumnMapping = (
+  row: typeof csvColumnMappingsTable.$inferSelect
+): CsvColumnMapping => {
+  return {
+    id: row.id,
+    accountId: row.accountId,
+    name: row.name,
+    dateColumn: row.dateColumn,
+    descriptionColumn: row.descriptionColumn,
+    amountColumn: row.amountColumn,
+    debitColumn: row.debitColumn,
+    creditColumn: row.creditColumn,
+    categoryColumn: row.categoryColumn,
+    notesColumn: row.notesColumn,
+    dateFormat: row.dateFormat,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt
+  }
+}
 
 export const createCsvImportRepository = (
   databaseClient: DatabaseClient
@@ -19,17 +60,20 @@ export const createCsvImportRepository = (
     },
 
     insertUpload: (upload) => {
-      databaseClient.db.insert(csvUploadsTable).values({
-        id: upload.id,
-        accountId: upload.accountId,
-        fileName: upload.fileName,
-        storedFilePath: upload.storedFilePath,
-        originalFileHash: upload.originalFileHash,
-        statementYear: upload.statementYear,
-        statementMonth: upload.statementMonth,
-        status: upload.status,
-        createdAt: upload.createdAt
-      }).run()
+      databaseClient.db
+        .insert(csvUploadsTable)
+        .values({
+          id: upload.id,
+          accountId: upload.accountId,
+          fileName: upload.fileName,
+          storedFilePath: upload.storedFilePath,
+          originalFileHash: upload.originalFileHash,
+          statementYear: upload.statementYear,
+          statementMonth: upload.statementMonth,
+          status: upload.status,
+          createdAt: upload.createdAt
+        })
+        .run()
     },
 
     listUploadsByAccountId: (accountId) => {
@@ -39,19 +83,7 @@ export const createCsvImportRepository = (
         .where(eq(csvUploadsTable.accountId, accountId))
         .all()
 
-      return rows.map((row): CsvUpload => {
-        return {
-          id: row.id,
-          accountId: row.accountId,
-          fileName: row.fileName,
-          storedFilePath: row.storedFilePath,
-          originalFileHash: row.originalFileHash,
-          statementYear: row.statementYear,
-          statementMonth: row.statementMonth,
-          status: row.status,
-          createdAt: row.createdAt
-        }
-      })
+      return rows.map(toCsvUpload)
     },
 
     findUploadById: (uploadId) => {
@@ -61,21 +93,7 @@ export const createCsvImportRepository = (
         .where(eq(csvUploadsTable.id, uploadId))
         .get()
 
-      if (!row) {
-        return null
-      }
-
-      return {
-        id: row.id,
-        accountId: row.accountId,
-        fileName: row.fileName,
-        storedFilePath: row.storedFilePath,
-        originalFileHash: row.originalFileHash,
-        statementYear: row.statementYear,
-        statementMonth: row.statementMonth,
-        status: row.status,
-        createdAt: row.createdAt
-      }
+      return row ? toCsvUpload(row) : null
     },
 
     updateUploadStatus: (uploadId, status) => {
@@ -180,6 +198,86 @@ export const createCsvImportRepository = (
         insertedCount,
         skippedDuplicateCount
       }
+    },
+
+    insertColumnMapping: (mapping) => {
+      databaseClient.db
+        .insert(csvColumnMappingsTable)
+        .values({
+          id: mapping.id,
+          accountId: mapping.accountId,
+          name: mapping.name,
+          dateColumn: mapping.dateColumn,
+          descriptionColumn: mapping.descriptionColumn,
+          amountColumn: mapping.amountColumn,
+          debitColumn: mapping.debitColumn,
+          creditColumn: mapping.creditColumn,
+          categoryColumn: mapping.categoryColumn,
+          notesColumn: mapping.notesColumn,
+          dateFormat: mapping.dateFormat,
+          createdAt: mapping.createdAt,
+          updatedAt: mapping.updatedAt
+        })
+        .run()
+    },
+
+    listColumnMappingsByAccountId: (accountId) => {
+      const rows = databaseClient.db
+        .select()
+        .from(csvColumnMappingsTable)
+        .where(eq(csvColumnMappingsTable.accountId, accountId))
+        .orderBy(desc(csvColumnMappingsTable.updatedAt))
+        .all()
+
+      return rows.map(toCsvColumnMapping)
+    },
+
+    findColumnMappingById: (mappingId) => {
+      const row = databaseClient.db
+        .select()
+        .from(csvColumnMappingsTable)
+        .where(eq(csvColumnMappingsTable.id, mappingId))
+        .get()
+
+      return row ? toCsvColumnMapping(row) : null
+    },
+
+    updateColumnMapping: (mapping) => {
+      databaseClient.db
+        .update(csvColumnMappingsTable)
+        .set({
+          name: mapping.name,
+          dateColumn: mapping.dateColumn,
+          descriptionColumn: mapping.descriptionColumn,
+          amountColumn: mapping.amountColumn,
+          debitColumn: mapping.debitColumn,
+          creditColumn: mapping.creditColumn,
+          categoryColumn: mapping.categoryColumn,
+          notesColumn: mapping.notesColumn,
+          dateFormat: mapping.dateFormat,
+          updatedAt: mapping.updatedAt
+        })
+        .where(eq(csvColumnMappingsTable.id, mapping.id))
+        .run()
+    },
+
+    deleteColumnMappingById: (mappingId) => {
+      databaseClient.db
+        .delete(csvColumnMappingsTable)
+        .where(eq(csvColumnMappingsTable.id, mappingId))
+        .run()
+    },
+
+    findLatestColumnMappingByAccountId: (accountId) => {
+      const row = databaseClient.db
+        .select()
+        .from(csvColumnMappingsTable)
+        .where(eq(csvColumnMappingsTable.accountId, accountId))
+        .orderBy(desc(csvColumnMappingsTable.updatedAt))
+        .limit(1)
+        .get()
+
+      return row ? toCsvColumnMapping(row) : null
     }
   }
 }

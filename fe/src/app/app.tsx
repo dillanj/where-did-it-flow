@@ -1,5 +1,5 @@
-import { AppShellWrapper } from './app-shell/view/wrapper'
+import { CsvImportWrapper } from './csv-import/view/wrapper'
 
 export const App = () => {
-  return <AppShellWrapper />
+  return <CsvImportWrapper />
 }

@@ -1,5 +1,6 @@
 export {
   accountsTable,
   csvUploadsTable,
-  transactionsTable
+  transactionsTable,
+  csvColumnMappingsTable
 } from '../../../../db/schema'

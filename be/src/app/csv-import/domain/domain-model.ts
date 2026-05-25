@@ -33,6 +33,22 @@ export type DraftCsvColumnMappingRequest = {
   dateFormat?: string | null
 }
 
+export type CsvColumnMapping = {
+  id: string
+  accountId: string
+  name: string
+  dateColumn: string
+  descriptionColumn: string
+  amountColumn: string | null
+  debitColumn: string | null
+  creditColumn: string | null
+  categoryColumn: string | null
+  notesColumn: string | null
+  dateFormat: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type ParsedTransactionCandidate = {
   uploadId: string
   accountId: string

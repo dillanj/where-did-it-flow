@@ -1,4 +1,5 @@
 import type {
+  CsvColumnMapping,
   CsvUpload,
   CsvUploadStatus,
   ParsedCsvFile,
@@ -25,6 +26,12 @@ export type CsvUploadRepositoryPort = {
     insertedCount: number
     skippedDuplicateCount: number
   }
+  insertColumnMapping: (mapping: CsvColumnMapping) => void
+  listColumnMappingsByAccountId: (accountId: string) => CsvColumnMapping[]
+  findColumnMappingById: (mappingId: string) => CsvColumnMapping | null
+  updateColumnMapping: (mapping: CsvColumnMapping) => void
+  deleteColumnMappingById: (mappingId: string) => void
+  findLatestColumnMappingByAccountId: (accountId: string) => CsvColumnMapping | null
 }
 
 export type CsvFileStoragePort = {
