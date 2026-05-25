@@ -1,4 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify'
+import { createCsvFileStorageAdapter } from './csv-import/adapter/files/csv-file-storage-adapter'
+import { createCsvImportRoutes } from './csv-import/adapter/http/csv-import-routes'
+import { createCsvParserAdapter } from './csv-import/adapter/parsing/csv-parser-adapter'
+import { createCsvImportRepository } from './csv-import/adapter/sqlite/csv-import-repository'
+import { CsvImportService } from './csv-import/service/csv-import-service'
 import type { DatabaseClient } from '../db/connection'
 import { createBootstrapRoutes } from './app-bootstrap/adapter/http/bootstrap-routes'
 import { createAppBootstrapRepository } from './app-bootstrap/adapter/sqlite/app-bootstrap-repository'
@@ -22,6 +27,18 @@ export const createRegisterAppRoutes = (
     await fastify.register(
       createBootstrapRoutes({
         service: bootstrapService
+      })
+    )
+
+    const csvImportService = new CsvImportService({
+      repository: createCsvImportRepository(input.databaseClient),
+      fileStorage: createCsvFileStorageAdapter(),
+      csvParser: createCsvParserAdapter()
+    })
+
+    await fastify.register(
+      createCsvImportRoutes({
+        csvImportService
       })
     )
   }
