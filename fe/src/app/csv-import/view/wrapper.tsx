@@ -1,50 +1,28 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { createAccountsApiAdapter } from '../../accounts/adapter/accounts-api-adapter'
-import { createCsvImportApiAdapter } from '../adapter/csv-import-api-adapter'
-import { CsvImportDomain } from '../domain/csv-import-domain'
-import { CsvImportPresenter } from '../presenter/csv-import-presenter'
+import { useSignalValue } from '@tcn/state'
+import type { AppDomain } from '../../domain/app-domain'
+import { AppPresenter } from '../../presenter/app-presenter'
 import { CsvImportScreen } from './components/csv-import-screen'
 
-const resolveApiBaseUrl = () => {
-  const envValue = import.meta.env.VITE_API_BASE_URL
-
-  if (typeof envValue === 'string' && envValue.trim()) {
-    return envValue
-  }
-
-  return 'http://127.0.0.1:4000'
+export type CsvImportWrapperProps = {
+  appDomain: AppDomain
 }
 
-export const CsvImportWrapper = () => {
+export const CsvImportWrapper = ({ appDomain }: CsvImportWrapperProps) => {
   const disposeTimeoutIdRef = useRef<number | null>(null)
 
   const runtime = useMemo(() => {
-    const apiBaseUrl = resolveApiBaseUrl()
-
-    const accountsApi = createAccountsApiAdapter({
-      apiBaseUrl
+    const presenter = new AppPresenter({
+      domain: appDomain
     })
-
-    const csvImportApi = createCsvImportApiAdapter({
-      apiBaseUrl
-    })
-
-    const domain = new CsvImportDomain({
-      accountsApi,
-      csvImportApi
-    })
-
-    const presenter = new CsvImportPresenter(domain)
 
     return {
       presenter,
-      domain,
       dispose: () => {
         presenter.dispose()
-        domain.dispose()
       }
     }
-  }, [])
+  }, [appDomain])
 
   useEffect(() => {
     if (disposeTimeoutIdRef.current !== null) {
@@ -62,5 +40,28 @@ export const CsvImportWrapper = () => {
     }
   }, [runtime])
 
-  return <CsvImportScreen presenter={runtime.presenter} />
+  const broadcasts = runtime.presenter.broadcasts
+  const hasInitialized = useSignalValue(broadcasts.hasInitialized)
+  const isInitializing = useSignalValue(broadcasts.isInitializing)
+  const errorMessage = useSignalValue(broadcasts.errorMessage)
+
+  if (hasInitialized) {
+    return <CsvImportScreen presenter={runtime.presenter.csvImportPresenter} />
+  }
+
+  return (
+    <main className='import-page'>
+      <section className='panel app-loading-panel'>
+        <header className='panel-header'>
+          <h2>{isInitializing ? 'Loading app' : 'App loading paused'}</h2>
+          <span>Root presenter</span>
+        </header>
+        {errorMessage ? (
+          <p className='status error'>{errorMessage}</p>
+        ) : (
+          <p className='status'>Preparing accounts and import workspace.</p>
+        )}
+      </section>
+    </main>
+  )
 }

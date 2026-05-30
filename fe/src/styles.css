@@ -101,6 +101,11 @@ select {
   grid-column: span 12;
 }
 
+.app-loading-panel {
+  max-width: 38rem;
+  margin: 20vh auto 0;
+}
+
 .panel-header {
   display: flex;
   align-items: baseline;

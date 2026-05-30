@@ -61,23 +61,12 @@ export class CsvImportPresenter {
 
   get broadcasts() {
     return {
-      accounts: this.accountsPresenter.broadcasts.accounts,
-      selectedAccountId: this.accountsPresenter.broadcasts.selectedAccountId,
-      uploads: this.uploadsPresenter.broadcasts.uploads,
-      selectedUploadId: this.uploadsPresenter.broadcasts.selectedUploadId,
-      selectedUploadDetails: this.uploadsPresenter.broadcasts.selectedUploadDetails,
-      headers: this.mappingPreviewPresenter.broadcasts.headers,
-      sampleRows: this.mappingPreviewPresenter.broadcasts.sampleRows,
-      mapping: this.mappingPreviewPresenter.broadcasts.mapping,
-      preview: this.mappingPreviewPresenter.broadcasts.preview,
-      importResult: this.mappingPreviewPresenter.broadcasts.importResult,
+      ...this.accountsPresenter.broadcasts,
+      ...this.uploadsPresenter.broadcasts,
+      ...this.mappingPreviewPresenter.broadcasts,
       message: this._message.broadcast,
       errorMessage: this._errorMessage.broadcast,
       isInitializing: this._isInitializing.broadcast,
-      isManagingAccount: this.accountsPresenter.broadcasts.isManagingAccount,
-      isUploading: this.uploadsPresenter.broadcasts.isUploading,
-      isPreviewing: this.mappingPreviewPresenter.broadcasts.isPreviewing,
-      isImporting: this.mappingPreviewPresenter.broadcasts.isImporting,
     };
   }
 

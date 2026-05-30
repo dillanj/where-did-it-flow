@@ -1,9 +1,7 @@
 import { AppError } from "../../shared/errors/app-error";
 import { AccountsDomain } from "../../accounts/domain/accounts-domain";
-import type { AccountsApiPort } from "../../accounts/domain/domain-ports";
 import type { AccountType } from "../../accounts/domain/domain-model";
 import type { ColumnMapping } from "./domain-model";
-import type { CsvImportApiPort } from "./domain-ports";
 import { MappingPreviewDomain } from "./mapping-preview-domain";
 import { UploadsDomain } from "./uploads-domain";
 
@@ -12,18 +10,14 @@ export class CsvImportDomain {
   readonly uploadsDomain: UploadsDomain;
   readonly mappingPreviewDomain: MappingPreviewDomain;
 
-  constructor(input: { accountsApi: AccountsApiPort; csvImportApi: CsvImportApiPort }) {
-    this.accountsDomain = new AccountsDomain({
-      api: input.accountsApi,
-    });
-
-    this.uploadsDomain = new UploadsDomain({
-      api: input.csvImportApi,
-    });
-
-    this.mappingPreviewDomain = new MappingPreviewDomain({
-      api: input.csvImportApi,
-    });
+  constructor(input: {
+    accountsDomain: AccountsDomain;
+    uploadsDomain: UploadsDomain;
+    mappingPreviewDomain: MappingPreviewDomain;
+  }) {
+    this.accountsDomain = input.accountsDomain;
+    this.uploadsDomain = input.uploadsDomain;
+    this.mappingPreviewDomain = input.mappingPreviewDomain;
   }
 
   initialize = async () => {
