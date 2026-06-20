@@ -2,6 +2,7 @@
   --bg: #f5f1e9;
   --surface: #fffcf5;
   --surface-2: #f2ebe0;
+  --table-row: #eee6db;
   --ink: #19211f;
   --ink-soft: #4f5a56;
   --line: #d8cec0;
@@ -13,7 +14,7 @@
 
   color: var(--ink);
   background: radial-gradient(circle at 12% 10%, #ffffff 0%, #f5f1e9 55%, #ece3d6 100%);
-  font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,6 +22,7 @@
     --bg: #121713;
     --surface: #19211c;
     --surface-2: #1f2a24;
+    --table-row: #0c100d;
     --ink: #f3f7ef;
     --ink-soft: #a8b5ac;
     --line: #34423a;
@@ -150,7 +152,10 @@ button {
   color: var(--ink);
   padding: 0.58rem 0.82rem;
   cursor: pointer;
-  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
 }
 
 button:hover:not(:disabled) {
@@ -272,11 +277,14 @@ button.accent {
   gap: 0.55rem;
 }
 
-.stat-grid div {
+.stat-grid button {
+  display: block;
+  width: 100%;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface-2);
   padding: 0.65rem;
+  text-align: left;
 }
 
 .stat-grid p {
@@ -289,18 +297,29 @@ button.accent {
   font-size: 1rem;
 }
 
+.stat-grid button.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
+}
+
 .preview-table {
   margin-top: 0.75rem;
-  max-height: 34rem;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--line);
   border-radius: 12px;
+}
+
+.preview-table-rows {
+  max-height: 34rem;
+  overflow-y: auto;
 }
 
 .preview-table table {
   width: 100%;
   border-collapse: collapse;
   min-width: 640px;
+  table-layout: fixed;
 }
 
 .preview-table th,
@@ -312,9 +331,31 @@ button.accent {
 }
 
 .preview-table th {
-  position: sticky;
-  top: 0;
   background: var(--surface-2);
+}
+
+.preview-table th:nth-child(1),
+.preview-table td:nth-child(1) {
+  width: 4.5rem;
+}
+
+.preview-table th:nth-child(2),
+.preview-table td:nth-child(2) {
+  width: 7rem;
+}
+
+.preview-table th:nth-child(4),
+.preview-table td:nth-child(4) {
+  width: 8.5rem;
+}
+
+.preview-table th:nth-child(5),
+.preview-table td:nth-child(5) {
+  width: 5.5rem;
+}
+
+.preview-table td {
+  background: var(--table-row);
 }
 
 .amount-positive {
@@ -323,6 +364,11 @@ button.accent {
 
 .amount-negative {
   color: var(--error);
+}
+
+.preview-table td.table-empty {
+  color: var(--ink-soft);
+  text-align: center;
 }
 
 .empty-state {

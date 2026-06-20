@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useSignalValue } from '@tcn/state'
 import { accountTypes } from '../../../accounts/domain/domain-model'
-import type { ColumnMapping } from '../../domain/domain-model'
+import type { ColumnMapping, UploadRowPreview } from '../../domain/domain-model'
 import type { CsvImportPresenter } from '../../presenter/csv-import-presenter'
+
+type PreviewFilter = 'all' | 'inflow' | 'outflow' | 'duplicates' | 'invalid'
 
 export type CsvImportScreenProps = {
   presenter: CsvImportPresenter
@@ -21,6 +23,30 @@ const getAmountClassName = (amountCents: number | null) => {
   }
 
   return amountCents > 0 ? 'amount-positive' : 'amount-negative'
+}
+
+const getStatTileClassName = (filter: PreviewFilter, activeFilter: PreviewFilter) => {
+  return filter === activeFilter ? 'selected' : ''
+}
+
+const filterPreviewRow = (row: UploadRowPreview, filter: PreviewFilter) => {
+  if (filter === 'all') {
+    return true
+  }
+
+  if (filter === 'inflow') {
+    return row.isValid && !row.isDuplicate && row.amountCents !== null && row.amountCents >= 0
+  }
+
+  if (filter === 'outflow') {
+    return row.isValid && !row.isDuplicate && row.amountCents !== null && row.amountCents < 0
+  }
+
+  if (filter === 'duplicates') {
+    return row.isDuplicate
+  }
+
+  return !row.isValid
 }
 
 export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
@@ -43,10 +69,17 @@ export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
 
   const [accountName, setAccountName] = useState('')
   const [accountType, setAccountType] = useState<(typeof accountTypes)[number]>('checking')
+  const [previewFilter, setPreviewFilter] = useState<PreviewFilter>('all')
 
   const previewRows = useMemo(() => {
-    return preview?.rows ?? []
-  }, [preview])
+    return preview?.rows.filter((row) => filterPreviewRow(row, previewFilter)) ?? []
+  }, [preview, previewFilter])
+
+  const selectPreviewFilter = (filter: PreviewFilter) => {
+    setPreviewFilter((activeFilter) => {
+      return activeFilter === filter ? 'all' : filter
+    })
+  }
 
   const handleCreateAccount = async () => {
     if (!accountName.trim()) {
@@ -246,26 +279,54 @@ export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
           {preview ? (
             <>
               <div className='stat-grid'>
-                <div>
+                <button
+                  className={getStatTileClassName('inflow', previewFilter)}
+                  type='button'
+                  aria-pressed={previewFilter === 'inflow'}
+                  onClick={() => {
+                    selectPreviewFilter('inflow')
+                  }}
+                >
                   <p>Inflow</p>
                   <strong>{formatCurrency(preview.inflowTotalCents)}</strong>
-                </div>
-                <div>
+                </button>
+                <button
+                  className={getStatTileClassName('outflow', previewFilter)}
+                  type='button'
+                  aria-pressed={previewFilter === 'outflow'}
+                  onClick={() => {
+                    selectPreviewFilter('outflow')
+                  }}
+                >
                   <p>Outflow</p>
                   <strong>{formatCurrency(preview.outflowTotalCents)}</strong>
-                </div>
-                <div>
+                </button>
+                <button
+                  className={getStatTileClassName('duplicates', previewFilter)}
+                  type='button'
+                  aria-pressed={previewFilter === 'duplicates'}
+                  onClick={() => {
+                    selectPreviewFilter('duplicates')
+                  }}
+                >
                   <p>Duplicates</p>
                   <strong>{preview.duplicateRowCount}</strong>
-                </div>
-                <div>
+                </button>
+                <button
+                  className={getStatTileClassName('invalid', previewFilter)}
+                  type='button'
+                  aria-pressed={previewFilter === 'invalid'}
+                  onClick={() => {
+                    selectPreviewFilter('invalid')
+                  }}
+                >
                   <p>Invalid</p>
                   <strong>{preview.invalidRowCount}</strong>
-                </div>
+                </button>
               </div>
 
               <div className='preview-table'>
-                <table>
+                <table className='preview-table-header'>
                   <thead>
                     <tr>
                       <th>Row</th>
@@ -275,25 +336,37 @@ export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
                       <th>Flags</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {previewRows.map((row) => {
-                      return (
-                        <tr key={`${row.rowIndex}-${row.description}`}>
-                          <td>{row.rowIndex + 1}</td>
-                          <td>{row.transactionDate ?? '—'}</td>
-                          <td>{row.description ?? '—'}</td>
-                          <td className={getAmountClassName(row.amountCents)}>
-                            {row.amountCents !== null ? formatCurrency(row.amountCents) : '—'}
-                          </td>
-                          <td>
-                            {row.isDuplicate ? 'duplicate' : ''}
-                            {row.isValid ? '' : ' invalid'}
+                </table>
+                <div className='preview-table-rows'>
+                  <table aria-label='Preview rows'>
+                    <tbody>
+                      {previewRows.length > 0 ? (
+                        previewRows.map((row) => {
+                          return (
+                            <tr key={`${row.rowIndex}-${row.description}`}>
+                              <td>{row.rowIndex + 1}</td>
+                              <td>{row.transactionDate ?? '—'}</td>
+                              <td>{row.description ?? '—'}</td>
+                              <td className={getAmountClassName(row.amountCents)}>
+                                {row.amountCents !== null ? formatCurrency(row.amountCents) : '—'}
+                              </td>
+                              <td>
+                                {row.isDuplicate ? 'duplicate' : ''}
+                                {row.isValid ? '' : ' invalid'}
+                              </td>
+                            </tr>
+                          )
+                        })
+                      ) : (
+                        <tr>
+                          <td className='table-empty' colSpan={5}>
+                            No rows in this selection.
                           </td>
                         </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </>
           ) : (
