@@ -29,5 +29,3 @@ feature-name/
     components/
   utils/
 ```
-
-Current scaffold uses `app-shell` as a non-business bootstrap example.
