@@ -37,7 +37,7 @@ export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
   const [accountType, setAccountType] = useState<(typeof accountTypes)[number]>('checking')
 
   const previewRows = useMemo(() => {
-    return preview?.rows.slice(0, 12) ?? []
+    return preview?.rows ?? []
   }, [preview])
 
   const handleCreateAccount = async () => {
