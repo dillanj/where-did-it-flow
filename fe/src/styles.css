@@ -7,6 +7,7 @@
   --line: #d8cec0;
   --accent: #176b57;
   --accent-ink: #ffffff;
+  --positive: #1d7a4f;
   --error: #a8352e;
   --shadow: 0 12px 40px rgba(28, 33, 31, 0.12);
 
@@ -25,6 +26,7 @@
     --line: #34423a;
     --accent: #67d0a8;
     --accent-ink: #102218;
+    --positive: #76d6a2;
     --error: #ff827a;
     --shadow: 0 16px 40px rgba(2, 8, 6, 0.5);
 
@@ -313,6 +315,14 @@ button.accent {
   position: sticky;
   top: 0;
   background: var(--surface-2);
+}
+
+.amount-positive {
+  color: var(--positive);
+}
+
+.amount-negative {
+  color: var(--error);
 }
 
 .empty-state {

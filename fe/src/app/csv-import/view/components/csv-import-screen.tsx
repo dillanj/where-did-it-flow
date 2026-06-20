@@ -15,6 +15,14 @@ const formatCurrency = (amountCents: number) => {
   }).format(amountCents / 100)
 }
 
+const getAmountClassName = (amountCents: number | null) => {
+  if (amountCents === null || amountCents === 0) {
+    return undefined
+  }
+
+  return amountCents > 0 ? 'amount-positive' : 'amount-negative'
+}
+
 export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
   const broadcasts = presenter.broadcasts
 
@@ -274,7 +282,9 @@ export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
                           <td>{row.rowIndex + 1}</td>
                           <td>{row.transactionDate ?? '—'}</td>
                           <td>{row.description ?? '—'}</td>
-                          <td>{row.amountCents !== null ? formatCurrency(row.amountCents) : '—'}</td>
+                          <td className={getAmountClassName(row.amountCents)}>
+                            {row.amountCents !== null ? formatCurrency(row.amountCents) : '—'}
+                          </td>
                           <td>
                             {row.isDuplicate ? 'duplicate' : ''}
                             {row.isValid ? '' : ' invalid'}
