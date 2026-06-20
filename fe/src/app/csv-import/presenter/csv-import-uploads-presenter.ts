@@ -59,22 +59,6 @@ export class CsvImportUploadsPresenter {
     }
   }
 
-  loadByAccountId = async (accountId: string | null) => {
-    await this._domain.loadByAccountId(accountId)
-  }
-
-  selectUpload = async (uploadId: string) => {
-    await this._domain.selectUpload(uploadId)
-  }
-
-  uploadCsv = async (input: { accountId: string; file: File }) => {
-    return this._domain.uploadCsv(input)
-  }
-
-  getSelectedUploadId = () => {
-    return this._domain.getSelectedUploadId()
-  }
-
   dispose = () => {
     this._isLoadingUploads.dispose()
     this._isUploading.dispose()

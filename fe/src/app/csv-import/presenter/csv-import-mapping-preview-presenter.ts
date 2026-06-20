@@ -1,5 +1,4 @@
 import { derive, type DerivedSignal } from '@tcn/state'
-import type { ColumnMapping, CsvUploadResult } from '../domain/domain-model'
 import type { MappingPreviewDomain } from '../domain/mapping-preview-domain'
 
 const isPending = (status: string) => {
@@ -54,30 +53,6 @@ export class CsvImportMappingPreviewPresenter {
       previewRunnerState: this._domain.previewRunner.stateBroadcast,
       importRunnerState: this._domain.importRunner.stateBroadcast
     }
-  }
-
-  setUploadContext = (upload: CsvUploadResult) => {
-    this._domain.setUploadContext(upload)
-  }
-
-  clearForSelectedUploadChange = () => {
-    this._domain.clearForSelectedUploadChange()
-  }
-
-  clearForSelectedAccountChange = () => {
-    this._domain.clearForSelectedAccountChange()
-  }
-
-  updateMapping = (field: keyof ColumnMapping, value: string) => {
-    this._domain.updateMapping(field, value)
-  }
-
-  previewUpload = async (uploadId: string) => {
-    await this._domain.previewUpload(uploadId)
-  }
-
-  importUpload = async (input: { uploadId: string; skipDuplicates: boolean }) => {
-    await this._domain.importUpload(input)
   }
 
   dispose = () => {

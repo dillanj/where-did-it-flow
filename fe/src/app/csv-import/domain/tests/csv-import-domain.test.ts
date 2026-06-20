@@ -1,76 +1,43 @@
-import { describe, expect, it } from "vitest";
-import { AccountsDomain } from "../../../accounts/domain/accounts-domain";
-import type { AccountsApiPort } from "../../../accounts/domain/domain-ports";
-import type { Account } from "../../../accounts/domain/domain-model";
-import { CsvImportDomain } from "../csv-import-domain";
-import type { CsvImportApiPort } from "../domain-ports";
-import { MappingPreviewDomain } from "../mapping-preview-domain";
-import { UploadsDomain } from "../uploads-domain";
+import { describe, expect, it } from 'vitest'
+import { CsvImportDomain } from '../csv-import-domain'
+import type { CsvImportApiPort } from '../domain-ports'
 
-const createApis = (): {
-  accountsApi: AccountsApiPort;
-  csvImportApi: CsvImportApiPort;
-  getListAccountsCallCount: () => number;
+const createApi = (): CsvImportApiPort & {
+  getListUploadsAccountIds: () => (string | null)[]
 } => {
-  const accounts: Account[] = [
-    {
-      id: "acct-1",
-      name: "Main",
-      type: "checking",
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
-    },
-  ];
+  const listUploadsAccountIds: (string | null)[] = []
 
-  let listAccountsCallCount = 0;
-
-  const accountsApi: AccountsApiPort = {
-    listAccounts: async () => {
-      listAccountsCallCount += 1;
-      return [...accounts];
-    },
-    createAccount: async ({ name, type }) => {
-      const nextAccount: Account = {
-        id: `acct-${accounts.length + 1}`,
-        name,
-        type,
-        createdAt: `2026-01-${String(accounts.length + 1).padStart(2, "0")}T00:00:00.000Z`,
-        updatedAt: `2026-01-${String(accounts.length + 1).padStart(2, "0")}T00:00:00.000Z`,
-      };
-
-      accounts.push(nextAccount);
-
-      return nextAccount;
-    },
-  };
-
-  const csvImportApi: CsvImportApiPort = {
-    uploadCsv: async () => {
+  return {
+    uploadCsv: async (input) => {
       return {
-        id: "upload-1",
-        accountId: "acct-1",
-        fileName: "test.csv",
-        status: "uploaded",
-        headers: ["Date", "Description", "Amount"],
+        id: 'upload-1',
+        accountId: input.accountId,
+        fileName: 'test.csv',
+        status: 'uploaded',
+        headers: ['Date', 'Description', 'Amount'],
         sampleRows: [],
-        createdAt: "2026-01-01T00:00:00.000Z",
-      };
+        createdAt: '2026-01-01T00:00:00.000Z'
+      }
     },
-    listUploadsByAccountId: async () => [],
+    listUploadsByAccountId: async (accountId) => {
+      listUploadsAccountIds.push(accountId)
+
+      return []
+    },
     getUploadById: async (uploadId) => {
       return {
         id: uploadId,
-        accountId: "acct-1",
-        fileName: "test.csv",
-        status: "uploaded",
-        createdAt: "2026-01-01T00:00:00.000Z",
+        accountId: 'acct-1',
+        fileName: 'test.csv',
+        status: 'uploaded',
+        createdAt: '2026-01-01T00:00:00.000Z',
         statementYear: null,
-        statementMonth: null,
-      };
+        statementMonth: null
+      }
     },
     previewUpload: async () => {
       return {
-        uploadId: "upload-1",
+        uploadId: 'upload-1',
         parsedRowCount: 0,
         invalidRowCount: 0,
         duplicateRowCount: 0,
@@ -78,102 +45,76 @@ const createApis = (): {
         outflowTotalCents: 0,
         appliedCategoryCount: 0,
         unmappedTransactionCount: 0,
-        rows: [],
-      };
+        rows: []
+      }
     },
     importUpload: async () => {
       return {
-        uploadId: "upload-1",
+        uploadId: 'upload-1',
         insertedCount: 0,
         skippedDuplicateCount: 0,
-        invalidRowCount: 0,
-      };
+        invalidRowCount: 0
+      }
     },
-  };
+    getListUploadsAccountIds: () => listUploadsAccountIds
+  }
+}
 
-  return {
-    accountsApi,
-    csvImportApi,
-    getListAccountsCallCount: () => listAccountsCallCount,
-  };
-};
-
-const createDomain = (input: {
-  accountsApi: AccountsApiPort;
-  csvImportApi: CsvImportApiPort;
-}) => {
+const createDomain = (api: CsvImportApiPort) => {
   return new CsvImportDomain({
-    accountsDomain: new AccountsDomain({
-      api: input.accountsApi,
-    }),
-    uploadsDomain: new UploadsDomain({
-      api: input.csvImportApi,
-    }),
-    mappingPreviewDomain: new MappingPreviewDomain({
-      api: input.csvImportApi,
-    }),
-  });
-};
+    api
+  })
+}
 
-describe("CsvImportDomain", () => {
-  it("loads accounts and selects first account on initialize", async () => {
-    const apiHarness = createApis();
-    const domain = createDomain({
-      accountsApi: apiHarness.accountsApi,
-      csvImportApi: apiHarness.csvImportApi,
-    });
+describe('CsvImportDomain', () => {
+  it('loads uploads for the provided account boundary', async () => {
+    const api = createApi()
+    const domain = createDomain(api)
 
-    await domain.initialize();
+    await domain.loadByAccountId('acct-1')
 
-    expect(domain.accountsDomain.accountsBroadcast.get()).toHaveLength(1);
-    expect(domain.accountsDomain.selectedAccountId.get()).toBe("acct-1");
+    expect(api.getListUploadsAccountIds()).toEqual(['acct-1'])
 
-    domain.dispose();
-  });
+    domain.dispose()
+  })
 
-  it("reloads accounts and keeps newly created account selected", async () => {
-    const apiHarness = createApis();
-    const domain = createDomain({
-      accountsApi: apiHarness.accountsApi,
-      csvImportApi: apiHarness.csvImportApi,
-    });
+  it('autofills mapping guesses from upload headers', async () => {
+    const api = createApi()
+    const domain = createDomain(api)
 
-    await domain.initialize();
-    await domain.createAccount({
-      name: "Travel Card",
-      type: "credit_card",
-    });
+    const file = new File(['Date,Description,Amount'], 'test.csv', {
+      type: 'text/csv'
+    })
 
-    const accounts = domain.accountsDomain.accountsBroadcast.get();
+    await domain.uploadCsv({
+      accountId: 'acct-1',
+      file
+    })
 
-    expect(domain.accountsDomain.accountsBroadcast.get()).toHaveLength(2);
-    expect(accounts.some((account) => account.name === "Travel Card")).toBe(true);
-    expect(domain.accountsDomain.selectedAccountId.get()).toBe("acct-2");
-    expect(apiHarness.getListAccountsCallCount()).toBe(2);
+    expect(domain.mappingPreviewDomain.mapping.get().dateColumn).toBe('Date')
+    expect(domain.mappingPreviewDomain.mapping.get().descriptionColumn).toBe('Description')
+    expect(domain.mappingPreviewDomain.mapping.get().amountColumn).toBe('Amount')
+    expect(domain.mappingPreviewDomain.contextUploadId.get()).toBe('upload-1')
 
-    domain.dispose();
-  });
+    domain.dispose()
+  })
 
-  it("autofills mapping guesses from upload headers", async () => {
-    const apiHarness = createApis();
-    const domain = createDomain({
-      accountsApi: apiHarness.accountsApi,
-      csvImportApi: apiHarness.csvImportApi,
-    });
+  it('reloads uploads for the provided account after import', async () => {
+    const api = createApi()
+    const domain = createDomain(api)
 
-    await domain.initialize();
+    await domain.uploadCsv({
+      accountId: 'acct-1',
+      file: new File(['Date,Description,Amount'], 'test.csv', {
+        type: 'text/csv'
+      })
+    })
+    await domain.importSelectedUpload({
+      accountId: 'acct-1'
+    })
 
-    const file = new File(["Date,Description,Amount"], "test.csv", {
-      type: "text/csv",
-    });
+    expect(api.getListUploadsAccountIds()).toEqual(['acct-1'])
 
-    await domain.uploadCsv(file);
-
-    expect(domain.mappingPreviewDomain.mapping.get().dateColumn).toBe("Date");
-    expect(domain.mappingPreviewDomain.mapping.get().descriptionColumn).toBe("Description");
-    expect(domain.mappingPreviewDomain.mapping.get().amountColumn).toBe("Amount");
-    expect(domain.mappingPreviewDomain.contextUploadId.get()).toBe("upload-1");
-
-    domain.dispose();
-  });
-});
+    domain.dispose()
+  })
+})

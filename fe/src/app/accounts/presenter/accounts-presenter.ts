@@ -1,6 +1,6 @@
 import { derive, type DerivedSignal } from "@tcn/state";
 import type { AccountsDomain } from "../domain/accounts-domain";
-import type { Account, AccountType } from "../domain/domain-model";
+import type { Account } from "../domain/domain-model";
 
 const isPending = (status: string) => {
   return status === "PENDING";
@@ -27,8 +27,6 @@ export class AccountsPresenter {
     this._domain = input.domain;
 
     this._sortedAccounts = derive(this._domain.accountsBroadcast, (accounts) => {
-      console.log("dillan - sortAccountsByNewest", sortAccountsByNewest(accounts).length);
-      console.log("dillan - accounts", accounts.length);
       return sortAccountsByNewest(accounts);
     });
 
@@ -61,22 +59,6 @@ export class AccountsPresenter {
       createAccountRunnerState: this._domain.createAccountRunner.stateBroadcast,
     };
   }
-
-  initialize = async () => {
-    // await this._domain.initialize();
-  };
-
-  createAccount = async (input: { name: string; type: AccountType }) => {
-    await this._domain.createAccount(input);
-  };
-
-  selectAccount = (accountId: string) => {
-    this._domain.selectAccount(accountId);
-  };
-
-  getSelectedAccountId = () => {
-    return this._domain.getSelectedAccountId();
-  };
 
   dispose = () => {
     this._sortedAccounts.dispose();

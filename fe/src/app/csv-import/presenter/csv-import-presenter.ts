@@ -1,62 +1,75 @@
-import { derive, type DerivedSignal } from "@tcn/state";
-import { AccountsPresenter } from "../../accounts/presenter/accounts-presenter";
-import type { AccountType } from "../../accounts/domain/domain-model";
-import type { ColumnMapping } from "../domain/domain-model";
-import type { CsvImportDomain } from "../domain/csv-import-domain";
-import { CsvImportMappingPreviewPresenter } from "./csv-import-mapping-preview-presenter";
-import { CsvImportUploadsPresenter } from "./csv-import-uploads-presenter";
+import { derive, type DerivedSignal } from '@tcn/state'
+import type { AccountType } from '../../accounts/domain/domain-model'
+import type { AccountsPresenter } from '../../accounts/presenter/accounts-presenter'
+import type { ColumnMapping } from '../domain/domain-model'
+import type { CsvImportDomain } from '../domain/csv-import-domain'
+import { CsvImportMappingPreviewPresenter } from './csv-import-mapping-preview-presenter'
+import { CsvImportUploadsPresenter } from './csv-import-uploads-presenter'
+
+export type CsvImportPresenterCommands = {
+  createAccount: (input: { name: string; type: AccountType }) => Promise<void>
+  selectAccount: (accountId: string) => Promise<void>
+  uploadCsv: (file: File) => Promise<void>
+  updateMapping: (field: keyof ColumnMapping, value: string) => void
+  previewSelectedUpload: () => Promise<void>
+  importSelectedUpload: () => Promise<void>
+}
 
 export class CsvImportPresenter {
-  private readonly _domain: CsvImportDomain;
+  private readonly _domain: CsvImportDomain
+  private readonly _commands: CsvImportPresenterCommands
 
-  readonly accountsPresenter: AccountsPresenter;
-  readonly uploadsPresenter: CsvImportUploadsPresenter;
-  readonly mappingPreviewPresenter: CsvImportMappingPreviewPresenter;
+  readonly accountsPresenter: AccountsPresenter
+  readonly uploadsPresenter: CsvImportUploadsPresenter
+  readonly mappingPreviewPresenter: CsvImportMappingPreviewPresenter
 
-  private readonly _message: DerivedSignal<string | null>;
-  private readonly _errorMessage: DerivedSignal<string | null>;
-  private readonly _isInitializing: DerivedSignal<boolean>;
+  private readonly _message: DerivedSignal<string | null>
+  private readonly _errorMessage: DerivedSignal<string | null>
+  private readonly _isInitializing: DerivedSignal<boolean>
 
-  constructor(domain: CsvImportDomain) {
-    this._domain = domain;
+  constructor(input: {
+    domain: CsvImportDomain
+    accountsPresenter: AccountsPresenter
+    commands: CsvImportPresenterCommands
+  }) {
+    this._domain = input.domain
+    this._commands = input.commands
 
-    this.accountsPresenter = new AccountsPresenter({
-      domain: this._domain.accountsDomain,
-    });
+    this.accountsPresenter = input.accountsPresenter
 
     this.uploadsPresenter = new CsvImportUploadsPresenter({
-      domain: this._domain.uploadsDomain,
-    });
+      domain: this._domain.uploadsDomain
+    })
 
     this.mappingPreviewPresenter = new CsvImportMappingPreviewPresenter({
-      domain: this._domain.mappingPreviewDomain,
-    });
+      domain: this._domain.mappingPreviewDomain
+    })
 
     this._message = derive(
       this.accountsPresenter.broadcasts.message,
       this.uploadsPresenter.broadcasts.message,
       this.mappingPreviewPresenter.broadcasts.message,
       (accountsMessage, uploadsMessage, mappingPreviewMessage) => {
-        return mappingPreviewMessage ?? uploadsMessage ?? accountsMessage ?? null;
-      },
-    );
+        return mappingPreviewMessage ?? uploadsMessage ?? accountsMessage ?? null
+      }
+    )
 
     this._errorMessage = derive(
       this.accountsPresenter.broadcasts.errorMessage,
       this.uploadsPresenter.broadcasts.errorMessage,
       this.mappingPreviewPresenter.broadcasts.errorMessage,
       (accountsErrorMessage, uploadsErrorMessage, mappingPreviewErrorMessage) => {
-        return mappingPreviewErrorMessage ?? uploadsErrorMessage ?? accountsErrorMessage ?? null;
-      },
-    );
+        return mappingPreviewErrorMessage ?? uploadsErrorMessage ?? accountsErrorMessage ?? null
+      }
+    )
 
     this._isInitializing = derive(
       this.accountsPresenter.broadcasts.isInitializing,
       this.uploadsPresenter.broadcasts.isLoadingUploads,
       (isAccountsInitializing, isUploadsInitializing) => {
-        return isAccountsInitializing || isUploadsInitializing;
-      },
-    );
+        return isAccountsInitializing || isUploadsInitializing
+      }
+    )
   }
 
   get broadcasts() {
@@ -66,72 +79,47 @@ export class CsvImportPresenter {
       ...this.mappingPreviewPresenter.broadcasts,
       message: this._message.broadcast,
       errorMessage: this._errorMessage.broadcast,
-      isInitializing: this._isInitializing.broadcast,
-    };
+      isInitializing: this._isInitializing.broadcast
+    }
   }
 
-  initialize = async () => {
-    try {
-      await this._domain.initialize();
-    } catch {
-      return;
-    }
-  };
-
   createAccount = async (input: { name: string; type: AccountType }) => {
-    await this._domain.createAccount(input);
-  };
+    await this._commands.createAccount(input)
+  }
 
   selectAccount = async (accountId: string) => {
-    try {
-      await this._domain.selectAccount(accountId);
-    } catch {
-      return;
-    }
-  };
+    await this._commands.selectAccount(accountId)
+  }
 
   selectUpload = async (uploadId: string) => {
     try {
-      await this._domain.selectUpload(uploadId);
+      await this._domain.selectUpload(uploadId)
     } catch {
-      return;
+      return
     }
-  };
+  }
 
   uploadCsv = async (file: File) => {
-    try {
-      await this._domain.uploadCsv(file);
-    } catch {
-      return;
-    }
-  };
+    await this._commands.uploadCsv(file)
+  }
 
   updateMapping = (field: keyof ColumnMapping, value: string) => {
-    this._domain.updateMapping(field, value);
-  };
+    this._commands.updateMapping(field, value)
+  }
 
   previewSelectedUpload = async () => {
-    try {
-      await this._domain.previewSelectedUpload();
-    } catch {
-      return;
-    }
-  };
+    await this._commands.previewSelectedUpload()
+  }
 
   importSelectedUpload = async () => {
-    try {
-      await this._domain.importSelectedUpload();
-    } catch {
-      return;
-    }
-  };
+    await this._commands.importSelectedUpload()
+  }
 
   dispose = () => {
-    this._message.dispose();
-    this._errorMessage.dispose();
-    this._isInitializing.dispose();
-    this.mappingPreviewPresenter.dispose();
-    this.uploadsPresenter.dispose();
-    this.accountsPresenter.dispose();
-  };
+    this._message.dispose()
+    this._errorMessage.dispose()
+    this._isInitializing.dispose()
+    this.mappingPreviewPresenter.dispose()
+    this.uploadsPresenter.dispose()
+  }
 }
