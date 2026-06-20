@@ -4,6 +4,7 @@ import { AppDomain } from '../app-domain'
 import type { AppApiPort } from '../domain-ports'
 
 const createApi = (): AppApiPort & {
+  getListAccountsCallCount: () => number
   getListUploadsAccountIds: () => string[]
 } => {
   const accounts: Account[] = [
@@ -15,11 +16,13 @@ const createApi = (): AppApiPort & {
       updatedAt: '2026-01-01T00:00:00.000Z'
     }
   ]
+  let listAccountsCallCount = 0
   const listUploadsAccountIds: string[] = []
 
   return {
     accountsApi: {
       listAccounts: async () => {
+        listAccountsCallCount += 1
         return [...accounts]
       },
       createAccount: async (input) => {
@@ -37,8 +40,16 @@ const createApi = (): AppApiPort & {
       }
     },
     csvImportApi: {
-      uploadCsv: async () => {
-        throw new Error('not implemented')
+      uploadCsv: async (input) => {
+        return {
+          id: 'upload-1',
+          accountId: input.accountId,
+          fileName: 'test.csv',
+          status: 'uploaded',
+          headers: ['Date', 'Description', 'Amount'],
+          sampleRows: [],
+          createdAt: '2026-01-01T00:00:00.000Z'
+        }
       },
       listUploadsByAccountId: async (accountId) => {
         listUploadsAccountIds.push(accountId)
@@ -55,6 +66,7 @@ const createApi = (): AppApiPort & {
         throw new Error('not implemented')
       }
     },
+    getListAccountsCallCount: () => listAccountsCallCount,
     getListUploadsAccountIds: () => listUploadsAccountIds
   }
 }
@@ -72,6 +84,46 @@ describe('AppDomain', () => {
     expect(domain.accountsDomain.accountsBroadcast.get()).toHaveLength(1)
     expect(domain.accountsDomain.getSelectedAccountId()).toBe('acct-1')
     expect(api.getListUploadsAccountIds()).toEqual(['acct-1'])
+
+    domain.dispose()
+  })
+
+  it('does not initialize child domains more than once', async () => {
+    const api = createApi()
+    const domain = new AppDomain({
+      api
+    })
+
+    await domain.initialize()
+    await domain.initialize()
+
+    expect(api.getListAccountsCallCount()).toBe(1)
+    expect(api.getListUploadsAccountIds()).toEqual(['acct-1'])
+
+    domain.dispose()
+  })
+
+  it('coordinates account creation from the root app boundary', async () => {
+    const api = createApi()
+    const domain = new AppDomain({
+      api
+    })
+
+    await domain.initialize()
+    await domain.uploadCsv(
+      new File(['Date,Description,Amount'], 'test.csv', {
+        type: 'text/csv'
+      })
+    )
+    await domain.createAccount({
+      name: 'Travel Card',
+      type: 'credit_card'
+    })
+
+    expect(domain.accountsDomain.accountsBroadcast.get()).toHaveLength(2)
+    expect(domain.accountsDomain.getSelectedAccountId()).toBe('acct-2')
+    expect(api.getListUploadsAccountIds()).toEqual(['acct-1', 'acct-2'])
+    expect(domain.csvImportDomain.mappingPreviewDomain.contextUploadId.get()).toBe(null)
 
     domain.dispose()
   })

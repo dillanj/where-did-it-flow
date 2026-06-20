@@ -13,7 +13,6 @@ export class AccountsDomain {
   readonly createAccountRunner = new Runner<void>(undefined);
 
   constructor(input: { api: AccountsApiPort }) {
-    console.log("dillan - created accounts domain");
     this._api = input.api;
   }
 
@@ -23,13 +22,11 @@ export class AccountsDomain {
 
   initialize = async () => {
     await this.initializeRunner.execute(async () => {
-      console.log("dillan - listing acocunts");
       const accounts = await this._api.listAccounts();
       const currentSelectedAccountId = this.selectedAccountId.get();
       const hasCurrentSelection =
         currentSelectedAccountId !== null && accounts.some((account) => account.id === currentSelectedAccountId);
       const nextSelectedAccountId = hasCurrentSelection ? currentSelectedAccountId : (accounts[0]?.id ?? null);
-      console.log("dillan - setting acocunts, ", accounts.length);
       this._accounts.set(accounts);
       this.selectedAccountId.set(nextSelectedAccountId);
       this.message.set(accounts.length > 0 ? null : "Create your first account to start importing CSV files.");
@@ -62,7 +59,6 @@ export class AccountsDomain {
   };
 
   dispose = () => {
-    console.log("dillan - disposed accounts domain");
     this._accounts.dispose();
     this.selectedAccountId.dispose();
     this.message.dispose();

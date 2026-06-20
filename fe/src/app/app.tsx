@@ -1,54 +1,88 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createAppApiAdapter } from "./adapter/app-api-adapter";
-import { CsvImportWrapper } from "./csv-import/view/wrapper";
-import { AppDomain } from "./domain/app-domain";
+import { useEffect, useMemo, useRef } from 'react'
+import { useSignalValue } from '@tcn/state'
+import { createAppApiAdapter } from './adapter/app-api-adapter'
+import { CsvImportWrapper } from './csv-import/view/wrapper'
+import { AppDomain } from './domain/app-domain'
+import { AppPresenter } from './presenter/app-presenter'
 
 const resolveApiBaseUrl = () => {
-  const envValue = import.meta.env.VITE_API_BASE_URL;
+  const envValue = import.meta.env.VITE_API_BASE_URL
 
-  if (typeof envValue === "string" && envValue.trim()) {
-    return envValue;
+  if (typeof envValue === 'string' && envValue.trim()) {
+    return envValue
   }
 
-  return "http://127.0.0.1:4000";
-};
-const createApp = () => {
-  console.log("dillan - creating app domain!");
+  return 'http://127.0.0.1:4000'
+}
 
+const createAppRuntime = () => {
   const api = createAppApiAdapter({
-    apiBaseUrl: resolveApiBaseUrl(),
-  });
+    apiBaseUrl: resolveApiBaseUrl()
+  })
 
-  return new AppDomain({
-    api,
-  });
-};
+  const domain = new AppDomain({
+    api
+  })
+
+  const presenter = new AppPresenter({
+    domain
+  })
+
+  return {
+    domain,
+    presenter,
+    dispose: () => {
+      presenter.dispose()
+      domain.dispose()
+    }
+  }
+}
 
 export const App = () => {
-  const disposeTimeoutIdRef = useRef<number | null>(null);
+  const disposeTimeoutIdRef = useRef<number | null>(null)
 
-  const [appDomain, setAppDomain] = useState(() => {
-    const app = createApp();
-    return app;
-  });
+  const runtime = useMemo(() => {
+    return createAppRuntime()
+  }, [])
 
-  useLayoutEffect(() => {
+  useEffect(() => {
+    if (disposeTimeoutIdRef.current !== null) {
+      window.clearTimeout(disposeTimeoutIdRef.current)
+      disposeTimeoutIdRef.current = null
+    }
+
+    void runtime.presenter.initialize()
+
     return () => {
-      console.log("dillan - disposing app domain!");
-      appDomain.dispose();
-    };
-    // if (disposeTimeoutIdRef.current !== null) {
-    //   window.clearTimeout(disposeTimeoutIdRef.current)
-    //   disposeTimeoutIdRef.current = null
-    // }
+      disposeTimeoutIdRef.current = window.setTimeout(() => {
+        runtime.dispose()
+        disposeTimeoutIdRef.current = null
+      }, 0)
+    }
+  }, [runtime])
 
-    // return () => {
-    //   disposeTimeoutIdRef.current = window.setTimeout(() => {
-    //     appDomain.dispose()
-    //     disposeTimeoutIdRef.current = null
-    //   }, 0)
-    // }
-  }, []);
+  const broadcasts = runtime.presenter.broadcasts
+  const hasInitialized = useSignalValue(broadcasts.hasInitialized)
+  const isInitializing = useSignalValue(broadcasts.isInitializing)
+  const errorMessage = useSignalValue(broadcasts.errorMessage)
 
-  return <CsvImportWrapper appDomain={appDomain} />;
-};
+  if (hasInitialized) {
+    return <CsvImportWrapper presenter={runtime.presenter.csvImportPresenter} />
+  }
+
+  return (
+    <main className='import-page'>
+      <section className='panel app-loading-panel'>
+        <header className='panel-header'>
+          <h2>{isInitializing ? 'Loading app' : 'App loading paused'}</h2>
+          <span>Root presenter</span>
+        </header>
+        {errorMessage ? (
+          <p className='status error'>{errorMessage}</p>
+        ) : (
+          <p className='status'>Preparing accounts and import workspace.</p>
+        )}
+      </section>
+    </main>
+  )
+}

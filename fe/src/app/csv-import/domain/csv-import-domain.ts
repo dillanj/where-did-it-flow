@@ -1,100 +1,82 @@
-import { AppError } from "../../shared/errors/app-error";
-import { AccountsDomain } from "../../accounts/domain/accounts-domain";
-import type { AccountType } from "../../accounts/domain/domain-model";
-import type { ColumnMapping } from "./domain-model";
-import { MappingPreviewDomain } from "./mapping-preview-domain";
-import { UploadsDomain } from "./uploads-domain";
+import { AppError } from '../../shared/errors/app-error'
+import type { CsvImportApiPort } from './domain-ports'
+import type { ColumnMapping } from './domain-model'
+import { MappingPreviewDomain } from './mapping-preview-domain'
+import { UploadsDomain } from './uploads-domain'
 
 export class CsvImportDomain {
-  readonly accountsDomain: AccountsDomain;
-  readonly uploadsDomain: UploadsDomain;
-  readonly mappingPreviewDomain: MappingPreviewDomain;
+  readonly uploadsDomain: UploadsDomain
+  readonly mappingPreviewDomain: MappingPreviewDomain
 
   constructor(input: {
-    accountsDomain: AccountsDomain;
-    uploadsDomain: UploadsDomain;
-    mappingPreviewDomain: MappingPreviewDomain;
+    api: CsvImportApiPort
   }) {
-    this.accountsDomain = input.accountsDomain;
-    this.uploadsDomain = input.uploadsDomain;
-    this.mappingPreviewDomain = input.mappingPreviewDomain;
+    this.uploadsDomain = new UploadsDomain({
+      api: input.api
+    })
+    this.mappingPreviewDomain = new MappingPreviewDomain({
+      api: input.api
+    })
   }
 
-  initialize = async () => {
-    await this.accountsDomain.initialize();
-    await this.uploadsDomain.loadByAccountId(this.accountsDomain.getSelectedAccountId());
-  };
+  loadByAccountId = async (accountId: string | null) => {
+    await this.uploadsDomain.loadByAccountId(accountId)
+  }
 
-  createAccount = async (input: { name: string; type: AccountType }) => {
-    await this.accountsDomain.createAccount(input);
-    await this.uploadsDomain.loadByAccountId(this.accountsDomain.getSelectedAccountId());
-    this.mappingPreviewDomain.clearForSelectedAccountChange();
-  };
-
-  selectAccount = async (accountId: string) => {
-    this.accountsDomain.selectAccount(accountId);
-    await this.uploadsDomain.loadByAccountId(accountId);
-    this.mappingPreviewDomain.clearForSelectedAccountChange();
-  };
+  clearForSelectedAccountChange = () => {
+    this.mappingPreviewDomain.clearForSelectedAccountChange()
+  }
 
   selectUpload = async (uploadId: string) => {
-    const previousUploadId = this.uploadsDomain.getSelectedUploadId();
+    const previousUploadId = this.uploadsDomain.getSelectedUploadId()
 
-    await this.uploadsDomain.selectUpload(uploadId);
+    await this.uploadsDomain.selectUpload(uploadId)
 
     if (previousUploadId !== uploadId) {
-      this.mappingPreviewDomain.clearForSelectedUploadChange();
+      this.mappingPreviewDomain.clearForSelectedUploadChange()
     }
-  };
+  }
 
-  uploadCsv = async (file: File) => {
-    const selectedAccountId = this.accountsDomain.getSelectedAccountId();
-
-    if (!selectedAccountId) {
-      throw new AppError("Select an account before uploading a CSV file.");
-    }
-
+  uploadCsv = async (input: { accountId: string; file: File }) => {
     const upload = await this.uploadsDomain.uploadCsv({
-      accountId: selectedAccountId,
-      file,
-    });
+      accountId: input.accountId,
+      file: input.file
+    })
 
-    this.mappingPreviewDomain.setUploadContext(upload);
-  };
+    this.mappingPreviewDomain.setUploadContext(upload)
+  }
 
   updateMapping = (field: keyof ColumnMapping, value: string) => {
-    this.mappingPreviewDomain.updateMapping(field, value);
-  };
+    this.mappingPreviewDomain.updateMapping(field, value)
+  }
 
   previewSelectedUpload = async () => {
-    const selectedUploadId = this.uploadsDomain.getSelectedUploadId();
+    const selectedUploadId = this.uploadsDomain.getSelectedUploadId()
 
     if (!selectedUploadId) {
-      throw new AppError("Select an upload before running preview.");
+      throw new AppError('Select an upload before running preview.')
     }
 
-    await this.mappingPreviewDomain.previewUpload(selectedUploadId);
-  };
+    await this.mappingPreviewDomain.previewUpload(selectedUploadId)
+  }
 
-  importSelectedUpload = async () => {
-    const selectedUploadId = this.uploadsDomain.getSelectedUploadId();
-    const selectedAccountId = this.accountsDomain.getSelectedAccountId();
+  importSelectedUpload = async (input: { accountId: string | null }) => {
+    const selectedUploadId = this.uploadsDomain.getSelectedUploadId()
 
     if (!selectedUploadId) {
-      throw new AppError("Select an upload before importing.");
+      throw new AppError('Select an upload before importing.')
     }
 
     await this.mappingPreviewDomain.importUpload({
       uploadId: selectedUploadId,
-      skipDuplicates: true,
-    });
+      skipDuplicates: true
+    })
 
-    await this.uploadsDomain.loadByAccountId(selectedAccountId);
-  };
+    await this.uploadsDomain.loadByAccountId(input.accountId)
+  }
 
   dispose = () => {
-    this.accountsDomain.dispose();
-    this.uploadsDomain.dispose();
-    this.mappingPreviewDomain.dispose();
-  };
+    this.uploadsDomain.dispose()
+    this.mappingPreviewDomain.dispose()
+  }
 }
