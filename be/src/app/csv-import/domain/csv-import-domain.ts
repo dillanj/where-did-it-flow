@@ -1,5 +1,6 @@
 import { parseDateToIso } from '../../../shared/dates/date-parsing'
 import { parseDecimalAmountToCents } from '../../../shared/money/amount-parsing'
+import { normalizeTransactionDescription } from '../../../shared/transactions/transaction-description'
 import type {
   CsvUpload,
   DraftCsvColumnMappingRequest,
@@ -76,12 +77,20 @@ export class CsvImportDomain {
         invalidRowCount += 1
         rows.push({
           rowIndex: index,
+          fingerprint: null,
           transactionDate: null,
           description: null,
           amountCents: null,
           isDuplicate: false,
           isValid: false,
-          invalidReason: mapped.invalidReason
+          invalidReason: mapped.invalidReason,
+          categoryId: null,
+          categoryName: null,
+          subcategoryId: null,
+          subcategoryName: null,
+          outflowClassification: null,
+          appliedRuleId: null,
+          appliedRuleName: null
         })
 
         return
@@ -109,12 +118,20 @@ export class CsvImportDomain {
 
       rows.push({
         rowIndex: index,
+        fingerprint: mapped.transaction.fingerprint,
         transactionDate: mapped.transaction.transactionDate,
         description: mapped.transaction.description,
         amountCents: mapped.transaction.amount,
         isDuplicate,
         isValid: true,
-        invalidReason: null
+        invalidReason: null,
+        categoryId: null,
+        categoryName: null,
+        subcategoryId: null,
+        subcategoryName: null,
+        outflowClassification: mapped.transaction.outflowClassification,
+        appliedRuleId: null,
+        appliedRuleName: null
       })
     })
 
@@ -174,7 +191,7 @@ export class CsvImportDomain {
       }
     }
 
-    const normalizedDescription = this._normalizeDescription(description)
+    const normalizedDescription = normalizeTransactionDescription(description)
     const fingerprint = this._hash.sha256(
       [input.accountId, transactionDate, normalizedDescription, String(amount)].join('|')
     )
@@ -234,7 +251,4 @@ export class CsvImportDomain {
     return debitCents + creditCents
   }
 
-  private _normalizeDescription = (description: string) => {
-    return description.trim().toLowerCase().replace(/\s+/g, ' ')
-  }
 }

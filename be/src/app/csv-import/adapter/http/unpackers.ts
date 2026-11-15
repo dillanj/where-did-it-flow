@@ -54,7 +54,24 @@ export const unpackPreviewResponse = (preview: UploadPreview) => {
     outflowTotalCents: preview.outflowTotalCents,
     appliedCategoryCount: preview.appliedCategoryCount,
     unmappedTransactionCount: preview.unmappedTransactionCount,
-    rows: preview.rows
+    rows: preview.rows.map((row) => {
+      return {
+        rowIndex: row.rowIndex,
+        transactionDate: row.transactionDate,
+        description: row.description,
+        amountCents: row.amountCents,
+        isDuplicate: row.isDuplicate,
+        isValid: row.isValid,
+        invalidReason: row.invalidReason,
+        categoryId: row.categoryId,
+        categoryName: row.categoryName,
+        subcategoryId: row.subcategoryId,
+        subcategoryName: row.subcategoryName,
+        outflowClassification: row.outflowClassification,
+        appliedRuleId: row.appliedRuleId,
+        appliedRuleName: row.appliedRuleName
+      }
+    })
   }
 }
 

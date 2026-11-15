@@ -47,7 +47,29 @@ export const unpackUploadResult = (value: unknown): CsvUploadResult => {
 }
 
 export const unpackUploadPreview = (value: unknown): UploadPreview => {
-  return value as UploadPreview
+  const payload = value as UploadPreview
+
+  return {
+    ...payload,
+    rows: payload.rows.map((row) => {
+      return {
+        rowIndex: row.rowIndex,
+        transactionDate: row.transactionDate,
+        description: row.description,
+        amountCents: row.amountCents,
+        isDuplicate: row.isDuplicate,
+        isValid: row.isValid,
+        invalidReason: row.invalidReason,
+        categoryId: row.categoryId ?? null,
+        categoryName: row.categoryName ?? null,
+        subcategoryId: row.subcategoryId ?? null,
+        subcategoryName: row.subcategoryName ?? null,
+        outflowClassification: row.outflowClassification ?? null,
+        appliedRuleId: row.appliedRuleId ?? null,
+        appliedRuleName: row.appliedRuleName ?? null
+      }
+    })
+  }
 }
 
 export const unpackUploadImportResult = (value: unknown): UploadImportResult => {

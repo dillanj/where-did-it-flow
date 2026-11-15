@@ -65,12 +65,20 @@ export type ParsedTransactionCandidate = {
 
 export type UploadPreviewRow = {
   rowIndex: number
+  fingerprint: string | null
   transactionDate: string | null
   description: string | null
   amountCents: number | null
   isDuplicate: boolean
   isValid: boolean
   invalidReason: string | null
+  categoryId: string | null
+  categoryName: string | null
+  subcategoryId: string | null
+  subcategoryName: string | null
+  outflowClassification: 'negative_outflow' | 'positive_outflow' | null
+  appliedRuleId: string | null
+  appliedRuleName: string | null
 }
 
 export type UploadPreview = {

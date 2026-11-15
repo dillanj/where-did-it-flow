@@ -2,6 +2,9 @@ import type { FastifyPluginAsync } from 'fastify'
 import { createAccountsRoutes } from './accounts/adapter/http/accounts-routes'
 import { createAccountsRepository } from './accounts/adapter/sqlite/accounts-repository'
 import { AccountsService } from './accounts/service/accounts-service'
+import { createCategoryRulesRoutes } from './category-rules/adapter/http/category-rules-routes'
+import { createCategoryRulesRepository } from './category-rules/adapter/sqlite/category-rules-repository'
+import { CategoryRulesService } from './category-rules/service/category-rules-service'
 import { createCsvFileStorageAdapter } from './csv-import/adapter/files/csv-file-storage-adapter'
 import { createCsvImportRoutes } from './csv-import/adapter/http/csv-import-routes'
 import { createCsvParserAdapter } from './csv-import/adapter/parsing/csv-parser-adapter'
@@ -43,10 +46,22 @@ export const createRegisterAppRoutes = (
       })
     )
 
+    const categoryRulesRepository = createCategoryRulesRepository(input.databaseClient)
+    const categoryRulesService = new CategoryRulesService({
+      repository: categoryRulesRepository
+    })
+
+    await fastify.register(
+      createCategoryRulesRoutes({
+        service: categoryRulesService
+      })
+    )
+
     const csvImportService = new CsvImportService({
       repository: createCsvImportRepository(input.databaseClient),
       fileStorage: createCsvFileStorageAdapter(),
-      csvParser: createCsvParserAdapter()
+      csvParser: createCsvParserAdapter(),
+      categoryRulesRepository
     })
 
     await fastify.register(

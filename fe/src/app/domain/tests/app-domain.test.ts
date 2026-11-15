@@ -5,6 +5,7 @@ import type { AppApiPort } from '../domain-ports'
 
 const createApi = (): AppApiPort & {
   getListAccountsCallCount: () => number
+  getListCategoryRulesCallCount: () => number
   getListUploadsAccountIds: () => string[]
 } => {
   const accounts: Account[] = [
@@ -17,6 +18,7 @@ const createApi = (): AppApiPort & {
     }
   ]
   let listAccountsCallCount = 0
+  let listCategoryRulesCallCount = 0
   const listUploadsAccountIds: string[] = []
 
   return {
@@ -37,6 +39,72 @@ const createApi = (): AppApiPort & {
         accounts.push(account)
 
         return account
+      }
+    },
+    categoryRulesApi: {
+      listCategories: async () => {
+        return []
+      },
+      createCategory: async (input) => {
+        return {
+          id: 'category-1',
+          parentCategoryId: input.parentCategoryId,
+          name: input.name,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z'
+        }
+      },
+      updateCategory: async (input) => {
+        return {
+          id: input.categoryId,
+          parentCategoryId: input.parentCategoryId,
+          name: input.name,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-02T00:00:00.000Z'
+        }
+      },
+      deleteCategory: async () => {
+        return
+      },
+      listRules: async () => {
+        listCategoryRulesCallCount += 1
+
+        return []
+      },
+      createRule: async (input) => {
+        return {
+          id: 'rule-1',
+          name: input.name,
+          matchColumn: 'description',
+          matchType: input.matchType,
+          matchValue: input.matchValue,
+          categoryId: input.categoryId,
+          subcategoryId: input.subcategoryId,
+          outflowClassification: input.outflowClassification,
+          priority: input.priority,
+          isEnabled: input.isEnabled,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z'
+        }
+      },
+      updateRule: async (input) => {
+        return {
+          id: input.ruleId,
+          name: input.name,
+          matchColumn: 'description',
+          matchType: input.matchType,
+          matchValue: input.matchValue,
+          categoryId: input.categoryId,
+          subcategoryId: input.subcategoryId,
+          outflowClassification: input.outflowClassification,
+          priority: input.priority,
+          isEnabled: input.isEnabled,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-02T00:00:00.000Z'
+        }
+      },
+      deleteRule: async () => {
+        return
       }
     },
     csvImportApi: {
@@ -67,6 +135,7 @@ const createApi = (): AppApiPort & {
       }
     },
     getListAccountsCallCount: () => listAccountsCallCount,
+    getListCategoryRulesCallCount: () => listCategoryRulesCallCount,
     getListUploadsAccountIds: () => listUploadsAccountIds
   }
 }
@@ -84,6 +153,7 @@ describe('AppDomain', () => {
     expect(domain.accountsDomain.accountsBroadcast.get()).toHaveLength(1)
     expect(domain.accountsDomain.getSelectedAccountId()).toBe('acct-1')
     expect(api.getListUploadsAccountIds()).toEqual(['acct-1'])
+    expect(api.getListCategoryRulesCallCount()).toBe(1)
 
     domain.dispose()
   })
@@ -98,6 +168,7 @@ describe('AppDomain', () => {
     await domain.initialize()
 
     expect(api.getListAccountsCallCount()).toBe(1)
+    expect(api.getListCategoryRulesCallCount()).toBe(1)
     expect(api.getListUploadsAccountIds()).toEqual(['acct-1'])
 
     domain.dispose()
@@ -123,6 +194,7 @@ describe('AppDomain', () => {
     expect(domain.accountsDomain.accountsBroadcast.get()).toHaveLength(2)
     expect(domain.accountsDomain.getSelectedAccountId()).toBe('acct-2')
     expect(api.getListUploadsAccountIds()).toEqual(['acct-1', 'acct-2'])
+    expect(domain.categoryRulesDomain.rules.get()).toEqual([])
     expect(domain.csvImportDomain.mappingPreviewDomain.contextUploadId.get()).toBe(null)
 
     domain.dispose()

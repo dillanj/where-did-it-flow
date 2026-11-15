@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto'
 import { createId } from '../../../shared/ids/create-id'
 import { AppError } from '../../../shared/errors/app-error'
+import { CategoryRuleApplicationDomain } from '../../category-rules/domain/category-rule-application-domain'
+import type { CategoryRulesRepositoryPort } from '../../category-rules/domain/domain-ports'
 import { CsvImportDomain } from '../domain/csv-import-domain'
 import type {
   CsvFileStoragePort,
@@ -11,13 +13,15 @@ import type {
   CsvUpload,
   DraftCsvColumnMappingRequest,
   UploadImportResult,
-  UploadPreview
+  UploadPreview,
+  UploadPreviewRow
 } from '../domain/domain-model'
 
 export type CreateCsvImportServiceInput = {
   repository: CsvUploadRepositoryPort
   fileStorage: CsvFileStoragePort
   csvParser: CsvParserPort
+  categoryRulesRepository: CategoryRulesRepositoryPort
 }
 
 export class CsvImportService {
@@ -25,11 +29,15 @@ export class CsvImportService {
   private readonly _fileStorage: CsvFileStoragePort
   private readonly _csvParser: CsvParserPort
   private readonly _domain: CsvImportDomain
+  private readonly _categoryRulesRepository: CategoryRulesRepositoryPort
+  private readonly _categoryRuleApplicationDomain: CategoryRuleApplicationDomain
 
   constructor(input: CreateCsvImportServiceInput) {
     this._repository = input.repository
     this._fileStorage = input.fileStorage
     this._csvParser = input.csvParser
+    this._categoryRulesRepository = input.categoryRulesRepository
+    this._categoryRuleApplicationDomain = new CategoryRuleApplicationDomain()
     this._domain = new CsvImportDomain({
       clock: {
         nowIso: () => new Date().toISOString()
@@ -146,13 +154,15 @@ export class CsvImportService {
       fingerprints
     )
 
-    return this._domain.buildPreview({
+    const preview = this._domain.buildPreview({
       uploadId: upload.id,
       accountId: upload.accountId,
       parsedCsv,
       columnMapping: input.columnMapping,
       existingFingerprints
     })
+
+    return this._applyCategoryRules(preview)
   }
 
   importUpload = (input: {
@@ -215,5 +225,90 @@ export class CsvImportService {
       this._repository.deleteUploadById(upload.id)
       this._fileStorage.delete(upload.storedFilePath)
     })
+  }
+
+  private _applyCategoryRules = (preview: UploadPreview): UploadPreview => {
+    const rules = this._categoryRulesRepository.listEnabledRules()
+    const categories = this._categoryRulesRepository.listCategories()
+
+    if (rules.length === 0 || categories.length === 0) {
+      return preview
+    }
+
+    const rowAssignments = new Map<
+      string,
+      Pick<
+        UploadPreviewRow,
+        | 'categoryId'
+        | 'categoryName'
+        | 'subcategoryId'
+        | 'subcategoryName'
+        | 'outflowClassification'
+        | 'appliedRuleId'
+        | 'appliedRuleName'
+      >
+    >()
+
+    const validTransactions = preview.validTransactions.map((transaction) => {
+      const assignment = this._categoryRuleApplicationDomain.findAssignment({
+        target: {
+          normalizedDescription: transaction.normalizedDescription,
+          amount: transaction.amount
+        },
+        rules,
+        categories
+      })
+
+      if (!assignment) {
+        return transaction
+      }
+
+      const outflowClassification =
+        assignment.outflowClassification ?? transaction.outflowClassification
+
+      rowAssignments.set(transaction.fingerprint, {
+        categoryId: assignment.categoryId,
+        categoryName: assignment.categoryName,
+        subcategoryId: assignment.subcategoryId,
+        subcategoryName: assignment.subcategoryName,
+        outflowClassification,
+        appliedRuleId: assignment.appliedRuleId,
+        appliedRuleName: assignment.appliedRuleName
+      })
+
+      return {
+        ...transaction,
+        categoryId: assignment.categoryId,
+        subcategoryId: assignment.subcategoryId,
+        outflowClassification
+      }
+    })
+
+    const rows = preview.rows.map((row) => {
+      const assignment = row.fingerprint
+        ? rowAssignments.get(row.fingerprint) ?? null
+        : null
+
+      if (!assignment || row.isDuplicate || !row.isValid) {
+        return row
+      }
+
+      return {
+        ...row,
+        ...assignment
+      }
+    })
+
+    const appliedCategoryCount = validTransactions.filter((transaction) => {
+      return transaction.categoryId !== null
+    }).length
+
+    return {
+      ...preview,
+      rows,
+      validTransactions,
+      appliedCategoryCount,
+      unmappedTransactionCount: validTransactions.length - appliedCategoryCount
+    }
   }
 }

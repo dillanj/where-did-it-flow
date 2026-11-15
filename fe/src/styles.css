@@ -136,6 +136,8 @@ select {
 
 .account-create input,
 .account-create select,
+.rules-form input,
+.rules-form select,
 .mapping-grid select {
   width: 100%;
   border: 1px solid var(--line);
@@ -170,8 +172,13 @@ button:disabled {
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.55rem;
   margin-top: 0.8rem;
+}
+
+.actions.compact {
+  margin-top: 0;
 }
 
 button.accent {
@@ -318,7 +325,7 @@ button.accent {
 .preview-table table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 640px;
+  min-width: 940px;
   table-layout: fixed;
 }
 
@@ -351,7 +358,17 @@ button.accent {
 
 .preview-table th:nth-child(5),
 .preview-table td:nth-child(5) {
-  width: 5.5rem;
+  width: 10rem;
+}
+
+.preview-table th:nth-child(6),
+.preview-table td:nth-child(6) {
+  width: 9rem;
+}
+
+.preview-table th:nth-child(7),
+.preview-table td:nth-child(7) {
+  width: 12rem;
 }
 
 .preview-table td {
@@ -394,13 +411,96 @@ button.accent {
   font-size: 0.85rem;
 }
 
+.rules-grid {
+  margin-top: 1rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.rules-grid .panel {
+  grid-column: span 6;
+}
+
+.rules-form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.rule-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rules-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.rules-form span,
+.toggle-row span {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.toggle-row {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.toggle-row input {
+  width: auto;
+}
+
+.category-list,
+.rule-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.category-row,
+.rule-row {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.7rem;
+}
+
+.rule-row strong,
+.category-row strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.rule-row span,
+.rule-row small {
+  color: var(--ink-soft);
+  display: block;
+  font-size: 0.78rem;
+  margin-top: 0.18rem;
+}
+
+.rule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
 @media (max-width: 900px) {
   .panel,
-  .panel.wide {
+  .panel.wide,
+  .rules-grid .panel {
     grid-column: span 12;
   }
 
-  .account-create {
+  .account-create,
+  .rule-form {
     grid-template-columns: 1fr;
   }
 }

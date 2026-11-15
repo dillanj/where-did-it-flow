@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useSignalValue } from '@tcn/state'
 import { createAppApiAdapter } from './adapter/app-api-adapter'
-import { CsvImportWrapper } from './csv-import/view/wrapper'
 import { AppDomain } from './domain/app-domain'
 import { AppPresenter } from './presenter/app-presenter'
+import { AppWorkspace } from './view/app-workspace'
 
 const resolveApiBaseUrl = () => {
   const envValue = import.meta.env.VITE_API_BASE_URL
@@ -67,7 +67,7 @@ export const App = () => {
   const errorMessage = useSignalValue(broadcasts.errorMessage)
 
   if (hasInitialized) {
-    return <CsvImportWrapper presenter={runtime.presenter.csvImportPresenter} />
+    return <AppWorkspace presenter={runtime.presenter} />
   }
 
   return (

@@ -1,6 +1,7 @@
 import { Runner, Signal } from '@tcn/state'
 import { AccountsDomain } from '../accounts/domain/accounts-domain'
 import type { AccountType } from '../accounts/domain/domain-model'
+import { CategoryRulesDomain } from '../category-rules/domain/category-rules-domain'
 import { CsvImportDomain } from '../csv-import/domain/csv-import-domain'
 import type { ColumnMapping } from '../csv-import/domain/domain-model'
 import { AppError } from '../shared/errors/app-error'
@@ -8,6 +9,7 @@ import type { AppApiPort } from './domain-ports'
 
 export class AppDomain {
   readonly accountsDomain: AccountsDomain
+  readonly categoryRulesDomain: CategoryRulesDomain
   readonly csvImportDomain: CsvImportDomain
 
   readonly hasInitialized = new Signal(false)
@@ -16,6 +18,10 @@ export class AppDomain {
   constructor(input: { api: AppApiPort }) {
     this.accountsDomain = new AccountsDomain({
       api: input.api.accountsApi
+    })
+
+    this.categoryRulesDomain = new CategoryRulesDomain({
+      api: input.api.categoryRulesApi
     })
 
     this.csvImportDomain = new CsvImportDomain({
@@ -31,6 +37,7 @@ export class AppDomain {
     await this.initializeRunner.execute(async () => {
       this.hasInitialized.set(false)
       await this.accountsDomain.initialize()
+      await this.categoryRulesDomain.initialize()
       await this.csvImportDomain.loadByAccountId(this.accountsDomain.getSelectedAccountId())
       this.hasInitialized.set(true)
     })
@@ -77,6 +84,7 @@ export class AppDomain {
 
   dispose = () => {
     this.csvImportDomain.dispose()
+    this.categoryRulesDomain.dispose()
     this.accountsDomain.dispose()
     this.hasInitialized.dispose()
     this.initializeRunner.dispose()

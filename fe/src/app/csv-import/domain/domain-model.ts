@@ -24,6 +24,13 @@ export type UploadRowPreview = {
   isDuplicate: boolean
   isValid: boolean
   invalidReason: string | null
+  categoryId: string | null
+  categoryName: string | null
+  subcategoryId: string | null
+  subcategoryName: string | null
+  outflowClassification: 'negative_outflow' | 'positive_outflow' | null
+  appliedRuleId: string | null
+  appliedRuleName: string | null
 }
 
 export type UploadPreview = {

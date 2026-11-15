@@ -99,10 +99,10 @@ export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
   }
 
   return (
-    <main className='import-page'>
+    <>
       <section className='import-hero'>
         <div>
-          <p className='eyebrow'>Phase 3 · CSV Import</p>
+          <p className='eyebrow'>Phase 5 · CSV Mapping + Import</p>
           <h1>Import Bank CSVs Without Leaking Logic Into React</h1>
           <p>
             Upload statements, map columns, preview parsed transactions, and confirm imports with
@@ -323,6 +323,17 @@ export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
                   <p>Invalid</p>
                   <strong>{preview.invalidRowCount}</strong>
                 </button>
+                <button
+                  className={getStatTileClassName('all', previewFilter)}
+                  type='button'
+                  aria-pressed={previewFilter === 'all'}
+                  onClick={() => {
+                    selectPreviewFilter('all')
+                  }}
+                >
+                  <p>Mapped</p>
+                  <strong>{preview.appliedCategoryCount}</strong>
+                </button>
               </div>
 
               <div className='preview-table'>
@@ -333,6 +344,8 @@ export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
                       <th>Date</th>
                       <th>Description</th>
                       <th>Amount</th>
+                      <th>Category</th>
+                      <th>Rule</th>
                       <th>Flags</th>
                     </tr>
                   </thead>
@@ -351,15 +364,27 @@ export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
                                 {row.amountCents !== null ? formatCurrency(row.amountCents) : '—'}
                               </td>
                               <td>
+                                {row.categoryName ? (
+                                  <>
+                                    {row.categoryName}
+                                    {row.subcategoryName ? ` / ${row.subcategoryName}` : ''}
+                                  </>
+                                ) : (
+                                  '—'
+                                )}
+                              </td>
+                              <td>{row.appliedRuleName ?? '—'}</td>
+                              <td>
                                 {row.isDuplicate ? 'duplicate' : ''}
                                 {row.isValid ? '' : ' invalid'}
+                                {row.outflowClassification ? ` ${row.outflowClassification}` : ''}
                               </td>
                             </tr>
                           )
                         })
                       ) : (
                         <tr>
-                          <td className='table-empty' colSpan={5}>
+                          <td className='table-empty' colSpan={7}>
                             No rows in this selection.
                           </td>
                         </tr>
@@ -383,6 +408,6 @@ export const CsvImportScreen = ({ presenter }: CsvImportScreenProps) => {
           ) : null}
         </article>
       </section>
-    </main>
+    </>
   )
 }

@@ -1,6 +1,7 @@
 import { derive, type DerivedSignal } from '@tcn/state'
 import type { AppDomain } from '../domain/app-domain'
 import { AccountsPresenter } from '../accounts/presenter/accounts-presenter'
+import { CategoryRulesPresenter } from '../category-rules/presenter/category-rules-presenter'
 import { CsvImportPresenter } from '../csv-import/presenter/csv-import-presenter'
 import type { AccountType } from '../accounts/domain/domain-model'
 import type { ColumnMapping } from '../csv-import/domain/domain-model'
@@ -14,6 +15,7 @@ export class AppPresenter {
   private _initializePromise: Promise<void> | null = null
 
   readonly accountsPresenter: AccountsPresenter
+  readonly categoryRulesPresenter: CategoryRulesPresenter
   readonly csvImportPresenter: CsvImportPresenter
 
   private readonly _isInitializing: DerivedSignal<boolean>
@@ -23,6 +25,9 @@ export class AppPresenter {
     this._domain = input.domain
     this.accountsPresenter = new AccountsPresenter({
       domain: this._domain.accountsDomain
+    })
+    this.categoryRulesPresenter = new CategoryRulesPresenter({
+      domain: this._domain.categoryRulesDomain
     })
     this.csvImportPresenter = new CsvImportPresenter({
       domain: this._domain.csvImportDomain,
@@ -114,6 +119,7 @@ export class AppPresenter {
     this._isInitializing.dispose()
     this._errorMessage.dispose()
     this.csvImportPresenter.dispose()
+    this.categoryRulesPresenter.dispose()
     this.accountsPresenter.dispose()
   }
 }
